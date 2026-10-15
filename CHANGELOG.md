@@ -114,3 +114,9 @@ First release.
 - **`price`**: re-price a report with new settings without scanning again. **`--resume`**: continue from a partial report; a checkpoint is written every 30 seconds.
 - **AI onboarding plan** (`ai-plan`, optional): Claude writes a phased Fusion onboarding plan from the report; `--anonymize` hashes names first.
 - Proxy support (`HTTPS_PROXY`) and friendly errors for authentication, rate limits and sign-in pages.
+
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.0...v1.2.1
+[1.2.0]: https://github.com/cxsmtp/cloc-fusion/compare/e4bc001...v1.2.0
+[1.1.0]: https://github.com/cxsmtp/cloc-fusion/compare/17bd63c...e4bc001
+[1.0.0]: https://github.com/cxsmtp/cloc-fusion/commit/17bd63c
