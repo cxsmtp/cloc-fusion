@@ -6,7 +6,7 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
 
 - **Nothing to install.** One file for Windows, macOS or Linux, with no runtime, git or packages needed.
 - **Every platform, every organization**, picked in a guided setup that also handles SSO sign-in.
-- **Built for scale:** 10,000 repositories, 47,000 API calls and injected failures, with 0 lost ([benchmarks](docs/BENCHMARKS.md)).
+- **Built for scale:** benchmarked at 10,000 repositories, with 47,000+ API calls and injected failures, and 0 lost ([benchmarks](docs/BENCHMARKS.md)).
 - **Secure by design:** tokens are never stored by default, never leave their host, and never appear in reports ([security](SECURITY.md)).
 
 ## Quick start
@@ -163,10 +163,10 @@ Reports are written to `cloc-fusion-output/`:
 
 These results come from the mock-API and local-git [benchmarks](docs/BENCHMARKS.md), run on a 4-CPU machine:
 
-- **API engine:** 10,000 repositories, about 47,500 requests including 2% injected 429/502 errors. **0 failures**, 68 s, 309 MB peak memory.
-- **Git engine:** 10,000 repositories cloned and measured. The current figures are in [BENCHMARKS.md](docs/BENCHMARKS.md).
-- **Line counting:** about 100 MB/s per core.
-- **Reports:** 10,000 repositories built in under 0.3 s and written in about 3 s.
+- **API engine:** 10,000 repositories, 47,525 requests including 755 injected 429/502 errors. **0 failures**, 74 s, 310 MB peak memory.
+- **Git engine:** 10,000 repositories cloned and measured. **0 failures**, 9–13 min on 4 CPUs, under 200 MB.
+- **Line counting:** 77–110 MB/s per core (about 3–4 million lines a second).
+- **Reports:** 10,000 repositories built in 0.3 s and written in about 3 s. The HTML report opens in 0.6 s.
 
 **Built to survive long runs:**
 - Retries with backoff on 429, 5xx and network errors; the GitHub rate-limit reset is honoured.
@@ -201,7 +201,7 @@ Claude (`claude-opus-5-5` by default) reads the report and writes `cloc-fusion-o
 ### Building from source
 
 ```
-npm test                          # 43 tests: engines, providers, reports, security
+npm test                          # 44 tests: engines, providers, reports, security
 node bench/bench.js --repos 1000  # benchmarks
 node scripts/build-binary.mjs     # standalone executable for this OS → dist/
 ```

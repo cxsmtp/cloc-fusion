@@ -109,3 +109,23 @@ test('hostile path lengths are skipped before any glob runs', async () => {
   assert.ok(performance.now() - t0 < 50);
   assert.ok(select('src/app.js'));
 });
+
+test('the HTML report script renders rows with safe links (run in a stub DOM)', async () => {
+  const vm = await import('node:vm');
+  const report = buildReport(normalizeConfig({}), [
+    { fullName: 'acme/api', name: 'api', org: 'acme', connection: 'c', provider: 'github', webUrl: 'https://github.com/acme/api', analyzedAt: 'x', loc: 10, commits: 3, weekly: [0, 1, 2] },
+    { fullName: 'acme/evil', name: 'evil', org: 'acme', connection: 'c', provider: 'github', webUrl: 'javascript:alert(1)', analyzedAt: 'x', loc: 5, commits: 0 },
+  ]);
+  const html = toHtml(report);
+  const data = html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/)[1];
+  const script = html.match(/<script>\n([\s\S]*?)<\/script>/)[1];
+  const el = () => ({ value: '', textContent: '', hidden: false, innerHTML: '', addEventListener() {}, setAttribute() {}, dataset: {} });
+  const els = { data: { textContent: data }, q: el(), fq: el(), st: el(), count: el(), more: el(), all: el() };
+  const tbody = el();
+  const document = { getElementById: (id) => els[id], querySelector: () => tbody, querySelectorAll: () => [] };
+  vm.runInNewContext(script, { document, Intl, JSON, Math, Number, String, setTimeout, clearTimeout });
+  assert.match(tbody.innerHTML, /<a href="https:\/\/github\.com\/acme\/api" target="_blank" rel="noopener">acme\/api<\/a>/);
+  assert.ok(!tbody.innerHTML.includes('javascript:'));
+  assert.match(tbody.innerHTML, />acme\/evil</);
+  assert.match(els.count.textContent, /2 of 2/);
+});

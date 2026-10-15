@@ -156,10 +156,10 @@ ${report.problems?.length ? `<h2>Problems</h2><div class="card"><table><thead><t
 var rows=JSON.parse(document.getElementById('data').textContent);
 var FQ=${JSON.stringify(report.byFrequency.map((b) => b.id))};
 var tbody=document.querySelector('#repos tbody'),q=document.getElementById('q'),fq=document.getElementById('fq'),st=document.getElementById('st'),count=document.getElementById('count');
-var sortKey='cd',dir=-1,PAGE=250,limit=PAGE,more=document.getElementById('more'),all=document.getElementById('all');
+var cmp=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'}).compare,sortKey='cd',dir=-1,PAGE=250,limit=PAGE,more=document.getElementById('more'),all=document.getElementById('all');
 function fmt(n,d){return n===null||n===undefined||n===''?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:d||0})}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function spark(w){if(!w||!w.length)return'';var m=Math.max.apply(null,w.concat([1])),W=104,H=20,s='';for(var i=0;i<w.length;i++){var h=w[i]?Math.max(2,Math.round(w[i]/m*H)):0;if(h)s+='<rect x="'+(i*2)+'" y="'+(H-h)+'" width="1.5" height="'+h+'"/>'}return'<svg class="spark" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" fill="currentColor" style="color:var(--bar)" aria-label="weekly commits">'+s+'</svg>'}
+function spark(w){if(!w||!w.length)return'';var m=Math.max.apply(null,w.concat([1])),W=104,H=20,d='';for(var i=0;i<w.length;i++){var h=w[i]?Math.max(2,Math.round(w[i]/m*H)):0;if(h)d+='M'+(i*2+0.75)+' '+H+'v-'+h}return d?'<svg class="spark" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" aria-label="weekly commits"><path d="'+d+'" stroke="currentColor" stroke-width="1.5" style="color:var(--bar)"/></svg>':''}
 function val(r,k){if(k==='fr')return FQ.indexOf(r.fr)<0?99:FQ.indexOf(r.fr);if(k==='w')return r.cm;return r[k]}
 function render(){
 var text=q.value.trim().toLowerCase(),f=fq.value,s=st.value;
@@ -168,11 +168,11 @@ if(text&&(r.n+' '+r.o+' '+r.c+' '+r.lg+' '+r.md).toLowerCase().indexOf(text)<0)r
 if(f&&r.fr!==f)return false;
 if(s==='skip'&&['ok','failed','empty','pending'].indexOf(r.st)>=0)return false;
 if(s&&s!=='skip'&&r.st!==s)return false;return true});
-list.sort(function(a,b){var x=val(a,sortKey),y=val(b,sortKey);if(x===y)return a.n.localeCompare(b.n);if(x===null||x===undefined||x==='')return 1;if(y===null||y===undefined||y==='')return -1;return(typeof x==='number'?x-y:String(x).localeCompare(String(y)))*dir});
+list.sort(function(a,b){var x=val(a,sortKey),y=val(b,sortKey);if(x===y)return cmp(a.n,b.n);if(x===null||x===undefined||x==='')return 1;if(y===null||y===undefined||y==='')return -1;return(typeof x==='number'?x-y:cmp(String(x),String(y)))*dir});
 count.textContent=list.length+' of '+rows.length;
 var shown=list.slice(0,limit);more.hidden=all.hidden=shown.length>=list.length;more.textContent='Show '+Math.min(PAGE,list.length-shown.length)+' more';all.textContent='Show all '+list.length;
 tbody.innerHTML=shown.map(function(r){
-var name=r.u&&/^https?:\/\//i.test(r.u)?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
+var name=r.u&&/^https?:/i.test(r.u)?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
 var status=r.st==='ok'?'<span class="ok">measured</span>':r.st==='failed'?'<span class="bad" title="'+esc(r.er)+'">failed</span>':'<span class="warn">'+esc(r.st)+'</span>';
 return '<tr><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.lg)+'</td><td class="n">'+fmt(r.loc)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.fq)+'</td><td class="n">'+fmt(r.sc)+'</td><td class="n">'+fmt(r.un)+'</td><td>'+esc(r.md)+'</td><td class="n">'+fmt(r.cd,1)+'</td><td>'+status+'</td></tr>'}).join('');
 document.querySelectorAll('#repos th').forEach(function(th){th.setAttribute('aria-sort',th.dataset.k===sortKey?(dir>0?'ascending':'descending'):'none')});
