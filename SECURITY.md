@@ -52,6 +52,13 @@ archives, repository contents, and report files fed back in with `--resume` or `
 | Accumulators fed from report files are prototype-free, so a crafted `--resume` file can't pollute prototypes. | `src/scan.js`, `src/loc.js` |
 | Text from APIs and git is printed without terminal control characters. | `bin/cloc-fusion.js` |
 
+### Updates
+| Protection | Where |
+|---|---|
+| `cloc-fusion update` installs only a file whose SHA-256 matches the release's `SHA256SUMS.txt`. It refuses a release without checksums, runs the new file once to confirm its version, and only then swaps it in, keeping the old one until the swap succeeds. | `src/update.js` |
+| Release downloads use the same credential rules as every API call: a token goes only to api.github.com, never to the download host it redirects to. | `src/update.js`, `src/http.js` |
+| The daily update check sends no data beyond a request for the latest release. It is skipped in CI and turned off with `CLOC_FUSION_NO_UPDATE_CHECK=1`. | `src/update.js` |
+
 ### Supply chain
 - **Zero runtime dependencies.** The tool uses only Node's standard library. The Anthropic SDK is optional, used only by `ai-plan`, and bundled into the standalone executables.
 - The standalone executables are built in CI from this repository, and releases publish SHA-256 checksums.

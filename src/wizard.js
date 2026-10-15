@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs';
 import { PROVIDERS } from './providers/index.js';
 import { DEFAULTS, loadConfig, saveConfig, resolveCredentials } from './config.js';
 import { FREQUENCIES, suggestedScans } from './fusion.js';
+import { banner } from './term.js';
 
 const bold = (s) => (stdout.isTTY ? `\x1b[1m${s}\x1b[0m` : s);
 const dim = (s) => (stdout.isTTY ? `\x1b[2m${s}\x1b[0m` : s);
@@ -283,7 +284,7 @@ async function fusionSetup(p, cfg) {
 export async function runWizard(file) {
   const p = new Prompter();
   try {
-    console.log(bold('\ncloc-fusion setup'));
+    console.log(banner('setup', stdout));
     console.log(dim('Connect your Git platforms, pick organizations, and set Fusion pricing. Nothing is scanned until you run "cloc-fusion scan".'));
     let cfg = { ...DEFAULTS, connections: [] };
     if (existsSync(file)) {

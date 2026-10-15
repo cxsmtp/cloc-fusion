@@ -6,7 +6,7 @@
 //
 // Build-time tools only (esbuild to bundle, postject to inject); the result needs nothing.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, writeFileSync, chmodSync, statSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync, readFileSync, chmodSync, statSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
 const os = { win32: 'windows', darwin: 'macos', linux: 'linux' }[process.platform] || process.platform;
@@ -18,8 +18,16 @@ const run = (cmd, args) => execFileSync(cmd, args, { stdio: 'inherit', shell: pr
 rmSync('dist', { recursive: true, force: true });
 mkdirSync('dist', { recursive: true });
 
-// 1. One CommonJS file with everything (the optional Claude SDK included).
-run(npx, ['--yes', 'esbuild@0.25.10', 'bin/cloc-fusion.js', '--bundle', '--platform=node', '--format=cjs', '--target=node22', '--outfile=dist/cloc-fusion.cjs', '--log-level=warning', '--legal-comments=none']);
+// 1. One CommonJS file with everything (the optional Claude SDK included), plus what this build is:
+//    its commit and date, and the changelog, read by src/version.js.
+let commit = process.env.GITHUB_SHA || '';
+try {
+  commit ||= execFileSync('git', ['rev-parse', 'HEAD']).toString().trim();
+} catch {}
+const build = { commit: commit.slice(0, 12) || 'unknown', date: new Date().toISOString().slice(0, 10) };
+writeFileSync('dist/build-globals.mjs', `globalThis.__CLOC_FUSION_BUILD__ = ${JSON.stringify(build)};\nglobalThis.__CLOC_FUSION_CHANGELOG__ = ${JSON.stringify(readFileSync('CHANGELOG.md', 'utf8'))};\n`);
+writeFileSync('dist/entry.mjs', "import './build-globals.mjs';\nimport '../bin/cloc-fusion.js';\n");
+run(npx, ['--yes', 'esbuild@0.25.10', 'dist/entry.mjs', '--bundle', '--platform=node', '--format=cjs', '--target=node22', '--outfile=dist/cloc-fusion.cjs', '--log-level=warning', '--legal-comments=none']);
 
 // 2. The SEA blob.
 writeFileSync('dist/sea-config.json', JSON.stringify({ main: 'dist/cloc-fusion.cjs', output: 'dist/sea-prep.blob', disableExperimentalSEAWarning: true, useSnapshot: false, useCodeCache: true }));

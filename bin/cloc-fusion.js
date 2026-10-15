@@ -10,6 +10,8 @@ import { scan, discover, reprice, VERSION } from '../src/scan.js';
 import { writeReports, consoleSummary, FORMATS } from '../src/report/index.js';
 import { gitVersion } from '../src/git.js';
 import { suggestedScans } from '../src/fusion.js';
+import { buildInfo, changelogReleases, compareVersions } from '../src/version.js';
+import { paint, banner, progressBar } from '../src/term.js';
 
 const HELP = `cloc-fusion ${VERSION} — lines of code, commit activity and Fusion credits for all your repositories
 
@@ -23,6 +25,9 @@ Commands
   price                Re-price an existing report with new Fusion settings (no rescan)
   ai-plan              Ask Claude for a phased Fusion onboarding plan from a report
   doctor               Check git, Node.js and every connection's sign-in
+  version              This copy's version and build, and whether a newer release is out
+  changelog            What changed, release by release (--all for every release)
+  update               Replace this executable with the latest release (checksum-verified)
 
 Options
   --config <file>          Configuration file (default: ${DEFAULT_CONFIG_FILE})
@@ -56,7 +61,7 @@ Examples
   cloc-fusion ai-plan --input cloc-fusion-output/cloc-fusion-report.json
 `;
 
-const FLAGS = new Set(['keep-clones', 'quiet', 'anonymize', 'help', 'version']);
+const FLAGS = new Set(['keep-clones', 'quiet', 'anonymize', 'help', 'version', 'all', 'check', 'force']);
 
 // Text from APIs and git is printed without its control characters (no terminal escape tricks).
 const clean = (m) => String(m).replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '');
@@ -123,11 +128,11 @@ function progressLine(quiet) {
   if (quiet || !process.stderr.isTTY) return () => {};
   let last = 0;
   return ({ done, total, current, phase }) => {
-    if (Date.now() - last < 120 && done < total) return;
+    if (Date.now() - last < 100 && done < total) return;
     last = Date.now();
-    const pct = total ? Math.floor((done / total) * 100) : 100;
-    const what = current ? ` ${current}${phase ? ` (${phase})` : ''}` : '';
-    process.stderr.write(`\r\x1b[K[${done}/${total} ${pct}%]${what}`.slice(0, (process.stderr.columns || 100) + 4));
+    const room = Math.max(8, (process.stderr.columns || 100) - 52);
+    const name = current && current.length > room ? `…${current.slice(-(room - 1))}` : current;
+    process.stderr.write(`\r\x1b[K${progressBar({ done, total, current: clean(name || ''), phase })}`);
     if (done === total) process.stderr.write('\r\x1b[K');
   };
 }
@@ -145,13 +150,64 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.version) return console.log(VERSION);
   const cmd = args._[0];
+  // The daily "newer version available" notice runs alongside long commands and is shown at the end.
+  const notice = ['scan', 'list', 'doctor', 'price', 'init'].includes(cmd) ? import('../src/update.js').then((m) => m.updateNotice()).catch(() => '') : Promise.resolve('');
+  try {
+    await runCommand(cmd, args);
+  } finally {
+    const text = await Promise.race([notice, new Promise((r) => setTimeout(() => r(''), 3000).unref())]);
+    if (text) console.error(`\n${text}`);
+  }
+}
+
+async function runCommand(cmd, args) {
   if (args.help || !cmd || cmd === 'help') return console.log(HELP);
   const configFile = resolve(args.config || DEFAULT_CONFIG_FILE);
   const outDir = resolve(args.out || 'cloc-fusion-output');
   const formats = args.format ? String(args.format).split(',').map((s) => s.trim()) : FORMATS;
   // Text from APIs and git is printed without its control characters (no terminal escape tricks).
-  const log = args.quiet ? () => {} : (m) => console.error(clean(m));
+  const p = paint(process.stderr);
+  // ✓ and ✗ in green and red when the terminal has colour.
+  const log = args.quiet ? () => {} : (m) => console.error(clean(m).replace(/^(\s*)✓/, `$1${p.ok}`).replace(/^(\s*)✗/, `$1${p.fail}`));
   const only = args.only ? String(args.only).split(',').map((s) => s.trim()).filter(Boolean) : [];
+
+  if (cmd === 'version') {
+    const b = buildInfo();
+    console.log(`cloc-fusion ${VERSION}`);
+    console.log(b.kind === 'executable' ? `standalone executable · built ${b.date} from ${b.commit}` : `running from source · Node.js ${process.versions.node}`);
+    console.log(`${process.platform}-${process.arch}`);
+    const { checkForUpdate } = await import('../src/update.js');
+    try {
+      const u = await checkForUpdate({ timeoutMs: 8000 });
+      console.log(u.newer ? `\nA newer release is out: ${u.latest} (${u.url}). Run "cloc-fusion update".` : `\nUp to date (latest release: ${u.latest}).`);
+    } catch (err) {
+      console.log(`\nCould not check for a newer release: ${err.message}`);
+    }
+    return;
+  }
+
+  if (cmd === 'changelog') {
+    const releases = changelogReleases();
+    if (!releases.length) throw new Error('no changelog is available in this copy');
+    let shown = releases;
+    if (args.since) shown = releases.filter((r) => compareVersions(r.version, args.since) > 0);
+    else if (!args.all) shown = releases.slice(0, 1);
+    for (const r of shown) console.log(`## ${r.version}${r.date ? ` (${r.date})` : ''}${r.version === VERSION ? '  ← this copy' : ''}\n\n${r.body}\n`);
+    if (!args.all && !args.since && releases.length > 1) console.log(`(${releases.length - 1} earlier release${releases.length > 2 ? 's' : ''}: cloc-fusion changelog --all, or --since <version>)`);
+    return;
+  }
+
+  if (cmd === 'update') {
+    const { selfUpdate, checkForUpdate } = await import('../src/update.js');
+    if (args.check) {
+      const u = await checkForUpdate();
+      console.log(u.newer ? `cloc-fusion ${u.latest} is available (you have ${VERSION}): ${u.url}` : `You have the latest version (${VERSION}).`);
+      if (u.newer) process.exitCode = 10;
+      return;
+    }
+    console.log(await selfUpdate({ log: (m) => console.error(m), force: Boolean(args.force) }));
+    return;
+  }
 
   if (cmd === 'init' || cmd === 'wizard') {
     const { runWizard } = await import('../src/wizard.js');
@@ -182,6 +238,7 @@ async function main() {
 
   if (cmd === 'scan') {
     const cfg = applyOptions(await loadConfig(configFile), args);
+    if (!args.quiet) console.error(banner('sizing your estate for Fusion'));
     const resume = args.resume ? JSON.parse(await readFile(resolve(args.resume), 'utf8')) : null;
     const report = await scan(cfg, {
       only,
@@ -195,7 +252,10 @@ async function main() {
     });
     const written = await writeReports(report, outDir, formats);
     if (!args.quiet) console.log(consoleSummary(report));
-    console.log(`\nReports:\n${written.map((p) => `  ${p}`).join('\n')}`);
+    const po = paint(process.stdout);
+    const total = report.credits.known ? `${Math.round(report.credits.total).toLocaleString('en-US')} credits` : `${report.totals.unitScans.toLocaleString('en-US')} 10K-unit scans`;
+    console.log(`\n  ${po.gradient('◆ Ready for Fusion')}  ${po.bold(`${report.counts.measured.toLocaleString('en-US')} repositories`)} ${po.dim('·')} ${po.bold(total)} ${po.dim(`· ${report.durationSeconds}s`)}`);
+    console.log(`\n${po.dim('Reports')}\n${written.map((f) => `  ${po.accent('→')} ${f}`).join('\n')}`);
     if (report.counts.failed || report.problems.length) process.exitCode = 2;
     return;
   }
@@ -242,6 +302,9 @@ if (proxied && !process.env.NODE_USE_ENV_PROXY && Number(process.versions.node.s
   const r = spawnSync(process.execPath, argv, { stdio: 'inherit', env });
   process.exit(r.status ?? 1);
 }
+
+// Output piped into something that stops reading (| head): exit quietly, like other CLIs.
+for (const stream of [process.stdout, process.stderr]) stream.on('error', (err) => (err.code === 'EPIPE' ? process.exit(0) : null));
 
 main().catch((err) => {
   console.error(`\nError: ${err.message}`);

@@ -2,6 +2,34 @@
 
 All notable changes to cloc-fusion. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-10-15
+
+The next-gen look, and always knowing which version you have.
+
+### Added
+- **Built-in version and history.** `cloc-fusion version` shows the version, the build (commit and date for standalone executables) and the platform, and says whether a newer release is out. `cloc-fusion changelog` prints this changelog from inside the tool: `--all` for every release, `--since <version>` for what changed after yours. Every report records the version that made it.
+- **Self-update.** `cloc-fusion update` replaces a standalone executable with the latest release for this platform:
+  - it checks the file against the release's `SHA256SUMS.txt` and runs it once before it switches over, and nothing changes if either check fails;
+  - `update --check` only checks and exits with code 10 when an update is available;
+  - private repositories use `GITHUB_TOKEN` or `gh auth login`.
+- **Update notice.** `scan`, `list`, `doctor`, `price` and `init` check for a newer release at most once a day and print a one-line notice at the end. It never delays a command by more than about 2.5 s, is skipped in CI, and is turned off with `CLOC_FUSION_NO_UPDATE_CHECK=1`.
+- **Version-controlled releases.** One version source (`src/version.js`), checked against `package.json` and the newest CHANGELOG entry by `test/version.test.js`. Each release is a git tag `vX.Y.Z`. The release workflow refuses a tag that doesn't match, and uses the version's CHANGELOG section as the release notes.
+- **Next-gen report look**, from the Cx Detection Date Base Reminder app's design (`nextgen.css`):
+  - **Themes and accents:** Obsidian (dark, the default) and Daylight, plus Auto. Five accents: indigo, cyan, emerald, violet and amber. The choice is remembered on each device.
+  - **Surfaces:** glass panels over an ambient aurora glow, with the accent's indigo → cyan gradients. Plus Jakarta Sans and JetBrains Mono are embedded (SIL OFL 1.1, `assets/fonts`), so the report renders the same offline.
+  - **Hero:** the credit total in a glowing readiness ring, a *Discovered → Measured → Planned → Ready for Fusion* journey, and a golden *Download the Fusion plan* button.
+  - **Motion:** figures count up, cadence and language bars grow in, and sections ease in as you scroll. Hover glows and press feedback on every button; smooth theme cross-fades.
+  - **Downloads and printing:** the whole plan or the current filtered view as CSV, straight from the page (formulas defused). The print view is clean.
+  - **Accessibility:** honours *reduced motion*, keeps focus rings, and works at phone width.
+- **Next-gen terminal look:** a gradient banner, a gradient progress bar, green ✓ and red ✗, and a closing *Ready for Fusion* line. Colour only on a terminal; `NO_COLOR` turns it off and `FORCE_COLOR` forces it.
+
+### Changed
+- Report title is now *Fusion Readiness Report*.
+- Standalone executables carry their commit, build date and the full changelog.
+
+### Fixed
+- Piping output into a command that stops reading (`| head`) exits quietly instead of failing with EPIPE.
+
 ## [1.1.0] - 2026-10-15
 
 Zero-install, hardened, and proven at 10,000 repositories.

@@ -8,6 +8,8 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
 - **Every platform, every organization**, picked in a guided setup that also handles SSO sign-in.
 - **Built for scale:** benchmarked at 10,000 repositories, with 47,000+ API calls and injected failures, and 0 lost ([benchmarks](docs/BENCHMARKS.md)).
 - **Secure by design:** tokens are never stored by default, never leave their host, and never appear in reports ([security](SECURITY.md)).
+- **A report you'll want to show:** the next-gen Obsidian and Daylight look, with a glowing readiness ring, smooth motion and one-click CSV download of the plan.
+- **Always current:** `cloc-fusion version` tells you what you have, and `cloc-fusion update` installs the latest release after checking its checksum.
 
 ## Quick start
 
@@ -50,6 +52,7 @@ The report also shows totals and the number of credit bundles you need. It break
 - [Security](#security)
 - [AI onboarding plan](#ai-onboarding-plan)
 - [Building from source](#building-from-source)
+- [Versions and updates](#versions-and-updates)
 
 ### How the calculation works
 
@@ -104,6 +107,9 @@ You can change any of this:
 | `price` | Re-price an existing report (new rate, period or extra %) without rescanning |
 | `doctor` | Check the engine and every connection's sign-in |
 | `ai-plan` | Ask Claude for a phased onboarding plan (optional) |
+| `version` | This copy's version and build, and whether a newer release is out |
+| `changelog` | What changed (`--all`, or `--since <version>`) |
+| `update` | Install the latest release, checksum-verified (`--check` only checks) |
 
 Common options:
 - `--credits-per-10k <n>`, `--period-months <n>`, `--extra-percent <n>`
@@ -134,7 +140,12 @@ Neither engine writes a working tree, and clones are deleted as soon as a reposi
 
 Reports are written to `cloc-fusion-output/`:
 
-- **HTML**: one self-contained file that works offline, in light or dark theme. It has the summary tiles, Fusion scans by change frequency, breakdowns by organization, model and language, and a sortable, filterable repository table that pages through 10,000+ rows smoothly.
+- **HTML**: one self-contained file that works offline, in the next-gen look (from the Cx Detection Date Base Reminder app's design):
+  - **Themes:** Obsidian (dark, the default), Daylight or Auto, with five accents; the choice is remembered on each device.
+  - **Overview:** a hero with the credit total in a readiness ring, the *Discovered → Measured → Planned → Ready for Fusion* journey, and summary tiles.
+  - **Detail:** Fusion cadence bars, breakdowns by organization, model and language, and a sortable, filterable repository table that pages through 10,000+ rows smoothly.
+  - **Motion:** figures count up and sections ease in. It respects reduced motion and prints cleanly.
+  - **Download** the whole plan, or the current view, as CSV in one click.
 - **CSV**: one row per repository, safe to open in Excel (formula injection is defused).
 - **JSON**: everything, including per-language counts and settings. `price` and `--resume` read it back.
 - **Markdown**: a summary for wikis and pull requests.
@@ -201,9 +212,21 @@ Claude (`claude-opus-5-5` by default) reads the report and writes `cloc-fusion-o
 ### Building from source
 
 ```
-npm test                          # 44 tests: engines, providers, reports, security
+npm test                          # 48 tests: engines, providers, reports, security, versioning
 node bench/bench.js --repos 1000  # benchmarks
 node scripts/build-binary.mjs     # standalone executable for this OS → dist/
 ```
+
+### Versions and updates
+
+The version lives in one place (`src/version.js`). Tests keep it in step with `package.json` and the newest [CHANGELOG.md](CHANGELOG.md) entry, and every release is a git tag `vX.Y.Z` whose notes are that changelog entry.
+
+```
+cloc-fusion version        # e.g. 1.2.0 · standalone executable · built 2026-10-15 from 1a2b3c4d5e6f
+cloc-fusion changelog      # what's new; --since 1.1.0 for everything after yours
+cloc-fusion update         # download the latest release, verify its SHA-256, swap it in
+```
+
+Long-running commands also print a one-line notice when a newer release is out. They check once a day, never in CI; turn it off with `CLOC_FUSION_NO_UPDATE_CHECK=1`. For a private repository, set `GITHUB_TOKEN` or sign in with `gh auth login`.
 
 Every change is recorded in [CHANGELOG.md](CHANGELOG.md).

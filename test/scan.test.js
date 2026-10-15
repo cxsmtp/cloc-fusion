@@ -107,7 +107,8 @@ test('scan measures local repositories and prices Fusion', async (t) => {
   const written = await writeReports(report, out);
   assert.equal(written.length, 4);
   const html = await readFile(join(out, 'cloc-fusion-report.html'), 'utf8');
-  assert.match(html, /Fusion sizing report/);
+  assert.match(html, /Fusion Readiness Report/);
+  assert.match(html, /sized and ready for Fusion/);
   assert.ok(!html.includes('</script><'), 'embedded data cannot close the script tag');
   assert.match(toCsv(report), /Suggested Fusion scans/);
 });

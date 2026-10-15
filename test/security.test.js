@@ -118,11 +118,11 @@ test('the HTML report script renders rows with safe links (run in a stub DOM)', 
   ]);
   const html = toHtml(report);
   const data = html.match(/<script id="data" type="application\/json">([\s\S]*?)<\/script>/)[1];
-  const script = html.match(/<script>\n([\s\S]*?)<\/script>/)[1];
+  const script = html.match(/<script id="app">\n([\s\S]*?)<\/script>/)[1];
   const el = () => ({ value: '', textContent: '', hidden: false, innerHTML: '', addEventListener() {}, setAttribute() {}, dataset: {} });
   const els = { data: { textContent: data }, q: el(), fq: el(), st: el(), count: el(), more: el(), all: el() };
   const tbody = el();
-  const document = { getElementById: (id) => els[id], querySelector: () => tbody, querySelectorAll: () => [] };
+  const document = { getElementById: (id) => els[id], querySelector: (sel) => (sel === '#repos tbody' ? tbody : null), querySelectorAll: () => [] };
   vm.runInNewContext(script, { document, Intl, JSON, Math, Number, String, setTimeout, clearTimeout });
   assert.match(tbody.innerHTML, /<a href="https:\/\/github\.com\/acme\/api" target="_blank" rel="noopener">acme\/api<\/a>/);
   assert.ok(!tbody.innerHTML.includes('javascript:'));

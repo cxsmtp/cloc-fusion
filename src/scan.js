@@ -8,10 +8,11 @@ import { resolveCredentials, redactConfig } from './config.js';
 import { analyzeRepo, gitVersion } from './git.js';
 import { analyzeRepoApi } from './apiengine.js';
 import { pool } from './pool.js';
+import { VERSION } from './version.js';
 import { frequencyOf, frequencyLabel, fusionEstimate, creditSummary } from './fusion.js';
 import { globToRegExp } from './languages.js';
 
-export const VERSION = '1.1.0';
+export { VERSION } from './version.js';
 
 const keyOf = (r) => `${r.connection}|${r.fullName}`;
 
