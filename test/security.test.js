@@ -129,3 +129,11 @@ test('the HTML report script renders rows with safe links (run in a stub DOM)', 
   assert.match(tbody.innerHTML, />acme\/evil</);
   assert.match(els.count.textContent, /2 of 2/);
 });
+
+test("a download's Accept header wins over the client's default media type", async () => {
+  const seen = [];
+  const api = new ApiClient({ name: 'X', baseUrl: 'https://api.test', headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer t' }, retries: 0, fetchImpl: async (url, init) => (seen.push(init.headers.Accept), new Response('x', { status: 200 })) });
+  await api.send('/asset', { accept: 'application/octet-stream' });
+  await api.get('/json').catch(() => {});
+  assert.deepEqual(seen, ['application/octet-stream', 'application/vnd.github+json']);
+});

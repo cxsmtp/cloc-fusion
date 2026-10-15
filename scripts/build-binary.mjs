@@ -30,7 +30,7 @@ writeFileSync('dist/entry.mjs', "import './build-globals.mjs';\nimport '../bin/c
 run(npx, ['--yes', 'esbuild@0.25.10', 'dist/entry.mjs', '--bundle', '--platform=node', '--format=cjs', '--target=node22', '--outfile=dist/cloc-fusion.cjs', '--log-level=warning', '--legal-comments=none']);
 
 // 2. The SEA blob.
-writeFileSync('dist/sea-config.json', JSON.stringify({ main: 'dist/cloc-fusion.cjs', output: 'dist/sea-prep.blob', disableExperimentalSEAWarning: true, useSnapshot: false, useCodeCache: true }));
+writeFileSync('dist/sea-config.json', JSON.stringify({ main: 'dist/cloc-fusion.cjs', output: 'dist/sea-prep.blob', disableExperimentalSEAWarning: true, useSnapshot: false, useCodeCache: false }));
 run(process.execPath, ['--experimental-sea-config', 'dist/sea-config.json']);
 
 // 3. A copy of this node binary with the blob injected.

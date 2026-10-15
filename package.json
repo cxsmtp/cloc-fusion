@@ -1,6 +1,6 @@
 {
   "name": "cloc-fusion",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Count lines of code and commit activity across every repository of your GitHub, GitLab, Azure DevOps and Bitbucket organizations, suggest Checkmarx One Fusion scan frequency, and work out the credits needed.",
   "type": "module",
   "bin": {

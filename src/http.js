@@ -77,7 +77,7 @@ export class ApiClient {
    * refused, and a redirect elsewhere (e.g. GitHub's archive download host) is followed without them.
    * Returns the ok Response (or the 404 / emptyOn one when allowed).
    */
-  async send(path, { method = 'GET', body, headers = {}, accept = 'application/json', allow = [], timeoutMs = this.timeoutMs } = {}) {
+  async send(path, { method = 'GET', body, headers = {}, accept = null, allow = [], timeoutMs = this.timeoutMs } = {}) {
     let url = this.url(path);
     if (!this.trusted.has(originOf(url))) throw new HttpError(`${this.name}: refusing to send credentials to ${originOf(url) || url}, which is not the configured API address`, { url });
     await this.slot();
@@ -92,7 +92,7 @@ export class ApiClient {
             this.requests++;
             res = await this.fetch(target, {
               method,
-              headers: { Accept: accept, 'User-Agent': 'cloc-fusion', ...(auth ? this.headers : {}), ...(auth ? headers : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+              headers: { Accept: 'application/json', 'User-Agent': 'cloc-fusion', ...(auth ? this.headers : {}), ...(auth ? headers : {}), ...(accept ? { Accept: accept } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
               body: body ? JSON.stringify(body) : undefined,
               signal: AbortSignal.timeout(timeoutMs),
               redirect: 'manual',

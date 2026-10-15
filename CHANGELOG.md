@@ -4,8 +4,15 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-15
+
+### Fixed
+- **`cloc-fusion update` downloads the release file itself.** In 1.2.0 the API client's default `Accept` header overrode the download's, so GitHub returned the file's metadata. The checksum check caught it and nothing was changed, but the update could not complete. 1.2.0 users: download 1.2.1 once from the Releases page; `update` works from then on.
+- Standalone executables no longer print "Code cache data rejected" on machines whose CPU differs from the build machine's. The code cache is off; start-up is unchanged in practice.
+
 ### Changed
 - Benchmark and test fault injection is deterministic: a share of URLs fail on their first attempt only. Retries are exercised on every run, and no run can exhaust them by chance (a CI run on Windows did).
+- Verified end to end: a 1.1.9 executable updated itself to the published 1.2.0 release, and the installed file matches the release's SHA-256.
 
 ## [1.2.0] - 2026-10-15
 
