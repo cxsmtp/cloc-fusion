@@ -1,7 +1,7 @@
 // The onboarding plan: Claude reads the sizing report and writes a phased plan for bringing every
 // repository onto Fusion, within the credits the report works out. Optional: needs the Anthropic
 // SDK (npm install @anthropic-ai/sdk) and an API key (ANTHROPIC_API_KEY, or `ant auth login`).
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 
 export const DEFAULT_MODEL = 'claude-opus-5-5';
 
@@ -16,8 +16,11 @@ Write a practical onboarding plan in Markdown for engineering and security leade
 Base every number on the report; when you estimate, say so. Keep it under about 900 words, tables where they help.`;
 
 function compact(report, { anonymize = false, top = 150 } = {}) {
-  const alias = (s) => (anonymize ? `repo-${createHash('sha1').update(String(s)).digest('hex').slice(0, 8)}` : s);
-  const orgAlias = (s) => (anonymize ? `org-${createHash('sha1').update(String(s)).digest('hex').slice(0, 6)}` : s);
+  // A fresh salt per run, so the aliases cannot be reversed by hashing guessed names.
+  const salt = randomBytes(16);
+  const h = (s) => createHash('sha256').update(salt).update(String(s)).digest('hex');
+  const alias = (s) => (anonymize ? `repo-${h(s).slice(0, 8)}` : s);
+  const orgAlias = (s) => (anonymize ? `org-${h(s).slice(0, 6)}` : s);
   const rows = report.repos
     .filter((r) => r.analyzedAt || r.error)
     .slice(0, top)

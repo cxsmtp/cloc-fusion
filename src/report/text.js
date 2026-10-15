@@ -37,7 +37,11 @@ export function consoleSummary(report, { top = 15 } = {}) {
   return out.join('\n');
 }
 
-const md = (s) => String(s ?? '').replace(/\|/g, '\\|');
+const md = (s) =>
+  String(s ?? '')
+    .replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' })[c])
+    .replace(/[|\\[\]*_`]/g, (c) => `\\${c}`)
+    .replace(/[\r\n]+/g, ' ');
 
 export function toMarkdown(report) {
   const t = report.totals;

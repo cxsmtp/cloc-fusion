@@ -2,6 +2,8 @@ name: CI
 on:
   push:
   pull_request:
+permissions:
+  contents: read
 jobs:
   test:
     strategy:
@@ -16,5 +18,16 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
       - run: git config --global user.email ci@example.com && git config --global user.name ci
-      - run: node --test test/fusion.test.js test/loc.test.js test/providers.test.js test/scan.test.js
+      - run: node --test test/fusion.test.js test/loc.test.js test/providers.test.js test/scan.test.js test/apiengine.test.js test/security.test.js
       - run: node bin/cloc-fusion.js --help
+  bench:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: git config --global user.email ci@example.com && git config --global user.name ci
+      - name: Benchmark (1,000 repos per scenario; the full 10,000 run is in docs/BENCHMARKS.md)
+        run: node bench/bench.js --repos 1000 | tee bench.txt
+      - run: tail -8 bench.txt >> "$GITHUB_STEP_SUMMARY"

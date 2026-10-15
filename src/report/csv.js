@@ -4,7 +4,7 @@ const cell = (v) => {
   if (v === null || v === undefined) return '';
   const s = String(v);
   // Quote, and defuse spreadsheet formulas in text cells.
-  const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d/.test(s) ? `'${s}` : s;
+  const safe = /^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s) ? `'${s}` : s;
   return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
 

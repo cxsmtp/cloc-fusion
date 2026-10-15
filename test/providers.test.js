@@ -118,3 +118,39 @@ test('the HTTP client explains a sign-in page answering instead of the API', asy
   const api = new ApiClient({ name: 'Azure DevOps', baseUrl: 'https://x.test', retries: 0, fetchImpl: async () => new Response('<html>Sign in</html>', { status: 203 }) });
   await assert.rejects(api.get('/a'), /did not return JSON/);
 });
+
+test('git-free engine paths: archive URLs and commit history per platform', async () => {
+  const since = '2026-01-01T00:00:00.000Z';
+  const repo = { id: '7', fullName: 'acme/api', org: 'acme', project: 'Shop', defaultBranch: 'main' };
+
+  const gl = providerOf('gitlab');
+  assert.equal(gl.archive(repo).url, '/projects/7/repository/archive.tar.gz?sha=main');
+  const glApi = withFetch(gl, {}, { token: 'T' }, fakeFetch({
+    [`https://gitlab.com/api/v4/projects/7/repository/commits?ref_name=main&since=${encodeURIComponent(since)}&per_page=100`]: { body: [{ committed_date: '2026-03-01T00:00:00Z', author_email: 'A@x', parent_ids: ['1'] }, { committed_date: '2026-03-02T00:00:00Z', author_email: 'b@x', parent_ids: ['1', '2'] }] },
+  }));
+  const g = await gl.commits(glApi, repo, since);
+  assert.equal(g.commits.length, 2);
+  assert.equal(g.commits[1].merge, true);
+
+  const bb = providerOf('bitbucket');
+  assert.equal(bb.archive(repo).url, 'https://bitbucket.org/acme/api/get/main.tar.gz');
+  const bbApi = withFetch(bb, { auth: { method: 'access-token' } }, { token: 'T' }, fakeFetch({
+    'https://api.bitbucket.org/2.0/repositories/acme/api/commits/main?pagelen=100': { body: { values: [{ date: '2026-05-01T00:00:00Z', author: { raw: 'A <a@x>' }, parents: [{}] }, { date: '2025-06-01T00:00:00Z', author: { raw: 'B <b@x>' }, parents: [{}] }], next: 'https://api.bitbucket.org/2.0/never-fetched' } },
+  }));
+  const b = await bb.commits(bbApi, repo, since);
+  assert.equal(b.commits.length, 1, 'stops at the first commit older than the window');
+  assert.equal(b.commits[0].email, 'a@x');
+  assert.equal(b.lastCommitAt, '2026-05-01T00:00:00Z');
+
+  const az = providerOf('azure');
+  assert.match(az.archive(repo, {}).url, /^https:\/\/dev\.azure\.com\/acme\/Shop\/_apis\/git\/repositories\/7\/items\?path=%2F.*%24format=zip/);
+  const page = (n, off) => ({ body: { value: Array.from({ length: n }, (_, i) => ({ committer: { date: '2026-04-01T00:00:00Z' }, author: { email: `d${(off + i) % 5}@x` }, comment: i === 0 ? 'Merged PR 12: x' : 'fix' })) } });
+  const base = 'https://dev.azure.com/acme/Shop/_apis/git/repositories/7/commits?searchCriteria.itemVersion.version=main&api-version=7.1';
+  const azApi = withFetch(az, { auth: { method: 'pat' } }, { token: 'T' }, fakeFetch({
+    [`${base}&searchCriteria.fromDate=${encodeURIComponent(since)}&searchCriteria.%24top=1000&searchCriteria.%24skip=0`]: page(1000, 0),
+    [`${base}&searchCriteria.fromDate=${encodeURIComponent(since)}&searchCriteria.%24top=1000&searchCriteria.%24skip=1000`]: page(3, 1000),
+  }));
+  const a = await az.commits(azApi, repo, since, {});
+  assert.equal(a.commits.length, 1003);
+  assert.equal(a.commits.filter((c) => c.merge).length, 2, '"Merged PR" commits are merges');
+});

@@ -35,14 +35,21 @@ export class ApiClient {
    * @param {string} o.name      provider name, for messages
    * @param {string} o.baseUrl   API root
    * @param {Record<string,string>} [o.headers] auth and other headers
+   * @param {string[]} [o.trustedOrigins] other origins the auth headers may go to (the API root's always may)
+   * @param {number} [o.maxConcurrent] requests in flight at once through this client
    */
-  constructor({ name, baseUrl, headers = {}, fetchImpl = globalThis.fetch, retries = 5, timeoutMs = 60000 }) {
+  constructor({ name, baseUrl, headers = {}, fetchImpl = globalThis.fetch, retries = 5, timeoutMs = 60000, trustedOrigins = [], maxConcurrent = 16 }) {
     this.name = name;
     this.baseUrl = String(baseUrl || '').replace(/\/+$/, '');
     this.headers = headers;
     this.fetch = fetchImpl;
     this.retries = retries;
     this.timeoutMs = timeoutMs;
+    this.trusted = new Set([originOf(this.baseUrl), ...trustedOrigins.map(originOf)].filter(Boolean));
+    this.maxConcurrent = maxConcurrent;
+    this.active = 0;
+    this.queue = [];
+    this.requests = 0;
   }
 
   url(path) {
@@ -50,55 +57,102 @@ export class ApiClient {
     return `${this.baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
   }
 
-  /** GET (or other method) returning { data, res }. Throws HttpError on a final failure. */
-  async request(path, { method = 'GET', body, headers = {}, allow404 = false } = {}) {
-    const url = this.url(path);
-    for (let attempt = 0; ; attempt++) {
-      let res;
-      try {
-        res = await this.fetch(url, {
-          method,
-          headers: { Accept: 'application/json', 'User-Agent': 'cloc-fusion', ...this.headers, ...headers, ...(body ? { 'Content-Type': 'application/json' } : {}) },
-          body: body ? JSON.stringify(body) : undefined,
-          signal: AbortSignal.timeout(this.timeoutMs),
-          redirect: 'follow',
-        });
-      } catch (err) {
-        if (attempt < this.retries) {
-          await sleep(Math.min(1000 * 2 ** attempt, 30000));
+  async slot() {
+    if (this.active < this.maxConcurrent) {
+      this.active++;
+      return;
+    }
+    await new Promise((r) => this.queue.push(r));
+  }
+
+  release() {
+    const next = this.queue.shift();
+    if (next) next();
+    else this.active--;
+  }
+
+  /**
+   * One HTTP exchange with retries on rate limits, server errors and network failures. The auth
+   * headers only ever go to trusted origins: a pagination link or API call to any other host is
+   * refused, and a redirect elsewhere (e.g. GitHub's archive download host) is followed without them.
+   * Returns the ok Response (or the 404 / emptyOn one when allowed).
+   */
+  async send(path, { method = 'GET', body, headers = {}, accept = 'application/json', allow = [], timeoutMs = this.timeoutMs } = {}) {
+    let url = this.url(path);
+    if (!this.trusted.has(originOf(url))) throw new HttpError(`${this.name}: refusing to send credentials to ${originOf(url) || url}, which is not the configured API address`, { url });
+    await this.slot();
+    try {
+      for (let attempt = 0; ; attempt++) {
+        let res;
+        let target = url;
+        try {
+          // Redirects by hand, so credentials never follow one to another host.
+          for (let hops = 0; ; hops++) {
+            const auth = this.trusted.has(originOf(target));
+            this.requests++;
+            res = await this.fetch(target, {
+              method,
+              headers: { Accept: accept, 'User-Agent': 'cloc-fusion', ...(auth ? this.headers : {}), ...(auth ? headers : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+              body: body ? JSON.stringify(body) : undefined,
+              signal: AbortSignal.timeout(timeoutMs),
+              redirect: 'manual',
+            });
+            const loc = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
+            if (!loc) break;
+            if (hops >= 5) throw new HttpError(`${this.name}: too many redirects from ${new URL(url).pathname}`, { url });
+            await res.body?.cancel().catch(() => {});
+            const nextUrl = new URL(loc, target);
+            if (nextUrl.protocol !== 'https:' && nextUrl.protocol !== new URL(target).protocol) throw new HttpError(`${this.name}: refusing a redirect from https to ${nextUrl.protocol}`, { url });
+            target = nextUrl.toString();
+          }
+        } catch (err) {
+          if (err instanceof HttpError) throw err;
+          if (attempt < this.retries) {
+            await sleep(Math.min(1000 * 2 ** attempt, 30000));
+            continue;
+          }
+          throw new HttpError(`${this.name}: could not reach ${new URL(url).host} (${err.cause?.code || err.name === 'TimeoutError' ? 'timed out' : err.message})`, { url });
+        }
+        if (res.ok || allow.includes(res.status)) return res;
+        const retryable = res.status === 429 || res.status >= 500 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0');
+        const delay = retryable && attempt < this.retries ? retryDelay(res, attempt) : null;
+        if (delay !== null) {
+          await res.body?.cancel().catch(() => {});
+          await sleep(delay);
           continue;
         }
-        throw new HttpError(`${this.name}: could not reach ${new URL(url).host} (${err.cause?.code || err.message})`, { url });
-      }
-      if (res.ok) {
-        const text = await res.text();
-        let data = null;
-        try {
-          data = text ? JSON.parse(text) : null;
-        } catch {
-          throw new HttpError(`${this.name}: ${url} did not return JSON (is the API URL right? a sign-in page or proxy may have answered)`, { status: res.status, url, body: text.slice(0, 300) });
+        if (res.headers.get('x-ratelimit-remaining') === '0' && res.headers.get('x-ratelimit-reset')) {
+          const at = new Date(Number(res.headers.get('x-ratelimit-reset')) * 1000);
+          throw new HttpError(`${this.name}: API rate limit reached; it resets at ${at.toLocaleTimeString()}. Run again then (add --resume with the partial report to skip what is done).`, { status: res.status, url });
         }
-        return { data, res };
+        const text = await res.text().catch(() => '');
+        let detail = text.slice(0, 300);
+        try {
+          const j = JSON.parse(text);
+          detail = j.message || j.error_description || j.error?.message || j.error || j.errors?.[0]?.message || detail;
+          if (typeof detail === 'object') detail = JSON.stringify(detail);
+        } catch {}
+        if (/<html/i.test(detail)) detail = 'an HTML page (sign-in page or proxy?)';
+        throw new HttpError(`${this.name}: ${method} ${new URL(url).pathname} → HTTP ${res.status}${detail ? `: ${String(detail).slice(0, 300)}` : ''}`, { status: res.status, url, body: text.slice(0, 500) });
       }
-      if (res.status === 404 && allow404) return { data: null, res };
-      const retryable = res.status === 429 || res.status >= 500 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0');
-      const delay = retryable && attempt < this.retries ? retryDelay(res, attempt) : null;
-      if (delay !== null) {
-        await sleep(delay);
-        continue;
-      }
-      if (res.headers.get('x-ratelimit-remaining') === '0' && res.headers.get('x-ratelimit-reset')) {
-        const at = new Date(Number(res.headers.get('x-ratelimit-reset')) * 1000);
-        throw new HttpError(`${this.name}: API rate limit reached; it resets at ${at.toLocaleTimeString()}. Run again then (add --resume with the partial report to skip what is done).`, { status: res.status, url });
-      }
-      const text = await res.text().catch(() => '');
-      let detail = text.slice(0, 300);
-      try {
-        const j = JSON.parse(text);
-        detail = j.message || j.error_description || j.error?.message || j.error || j.errors?.[0]?.message || detail;
-        if (typeof detail === 'object') detail = JSON.stringify(detail);
-      } catch {}
-      throw new HttpError(`${this.name}: ${method} ${new URL(url).pathname} → HTTP ${res.status}${detail ? `: ${detail}` : ''}`, { status: res.status, url, body: text.slice(0, 500) });
+    } finally {
+      this.release();
+    }
+  }
+
+  /** GET (or other method) returning { data, res }; data is null for an allowed 404 / emptyOn status. */
+  async request(path, { method, body, headers, allow404 = false, emptyOn = [] } = {}) {
+    const allow = [...emptyOn, ...(allow404 ? [404] : [])];
+    const res = await this.send(path, { method, body, headers, allow });
+    if (!res.ok) {
+      await res.body?.cancel().catch(() => {});
+      return { data: null, res };
+    }
+    const text = await readText(res, MAX_JSON_BYTES);
+    try {
+      return { data: text ? JSON.parse(text) : null, res };
+    } catch {
+      throw new HttpError(`${this.name}: ${this.url(path)} did not return JSON (is the API URL right? a sign-in page or proxy may have answered)`, { status: res.status, url: this.url(path), body: text.slice(0, 300) });
     }
   }
 
@@ -106,23 +160,57 @@ export class ApiClient {
     return (await this.request(path, opts)).data;
   }
 
+  /** The response of a download (an archive), for streaming; allowed up to `timeoutMs` in all. */
+  async download(path, { timeoutMs = 30 * 60000 } = {}) {
+    return this.send(path, { accept: '*/*', timeoutMs });
+  }
+
   /**
    * Every item of a paginated list. `next(data, res, url)` returns the next page's URL or null;
    * `items(data)` the page's items. Stops after `max` items.
    */
-  async paginate(path, { items = (d) => d, next = linkNext, max = 100000 } = {}) {
+  async paginate(path, { items = (d) => d, next = linkNext, max = 1000000, emptyOn = [] } = {}) {
     const out = [];
     let url = this.url(path);
     const seen = new Set();
     while (url && !seen.has(url) && out.length < max) {
       seen.add(url);
-      const { data, res } = await this.request(url);
-      const page = items(data) || [];
-      out.push(...page);
+      const { data, res } = await this.request(url, { emptyOn });
+      const got = data && items(data);
+      const page = Array.isArray(got) ? got : [];
+      for (const item of page) out.push(item);
       url = page.length ? next(data, res, url) : null;
       if (url && !/^https?:/i.test(url)) url = this.url(url);
     }
     return out.slice(0, max);
+  }
+}
+
+// An API answer larger than this is refused rather than read into memory.
+const MAX_JSON_BYTES = 64 * 1024 * 1024;
+
+async function readText(res, limit) {
+  const declared = Number(res.headers.get('content-length'));
+  if (declared > limit) throw new HttpError(`response too large (${Math.round(declared / 1048576)} MB)`, { status: res.status });
+  if (!res.body) return '';
+  const decoder = new TextDecoder();
+  let out = '';
+  let size = 0;
+  for await (const chunk of res.body) {
+    size += chunk.length;
+    if (size > limit) {
+      throw new HttpError(`response larger than ${Math.round(limit / 1048576)} MB refused`, { status: res.status });
+    }
+    out += decoder.decode(chunk, { stream: true });
+  }
+  return out + decoder.decode();
+}
+
+function originOf(url) {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return '';
   }
 }
 

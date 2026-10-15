@@ -24,7 +24,7 @@ export default {
       id: 'gh-cli',
       label: 'Reuse my GitHub CLI sign-in (gh auth login: browser / SSO)',
       help: ['Runs `gh auth token` each time; sign in first with `gh auth login` (add `--hostname <host>` for Enterprise Server).'],
-      tokenCommand: (conn) => (hostOf(conn) === 'github.com' ? 'gh auth token' : `gh auth token --hostname ${hostOf(conn)}`),
+      tokenCommand: (conn) => (hostOf(conn) === 'github.com' ? ['gh', 'auth', 'token'] : ['gh', 'auth', 'token', '--hostname', hostOf(conn)]),
     },
   ],
 
@@ -67,8 +67,30 @@ export default {
     }));
   },
 
+  /** Hosts its clone URLs may point to: github.com, or the Enterprise Server's own host. */
+  gitHosts(conn) {
+    return [hostOf(conn)];
+  },
+
   gitAuthHeader(_conn, secret) {
     return basic('x-access-token', secret.token);
+  },
+
+  // Git-free engine: the default branch as a tarball, and its commits since a date.
+  archive(repo) {
+    return { url: `/repos/${repo.fullName}/tarball/${encodeURIComponent(repo.defaultBranch)}`, format: 'tgz' };
+  },
+
+  async commits(api, repo, since) {
+    const ref = encodeURIComponent(repo.defaultBranch);
+    const list = await api.paginate(`/repos/${repo.fullName}/commits?sha=${ref}&since=${encodeURIComponent(since)}&per_page=100`, { emptyOn: [409] });
+    const out = list.map((c) => ({ t: Date.parse(c.commit?.committer?.date || c.commit?.author?.date), email: c.commit?.author?.email || c.author?.login || '', merge: (c.parents?.length || 0) > 1 }));
+    if (!out.length) {
+      const last = await api.get(`/repos/${repo.fullName}/commits?sha=${ref}&per_page=1`, { allow404: true, emptyOn: [409] });
+      const c = Array.isArray(last) ? last[0] : null;
+      return { commits: out, lastCommitAt: c ? c.commit?.committer?.date : null };
+    }
+    return { commits: out };
   },
 };
 

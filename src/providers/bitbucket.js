@@ -2,6 +2,8 @@
 import { ApiClient, basic } from '../http.js';
 
 const nextOf = (data) => data?.next || null;
+// A guard against a server that never ends its pages: 1,000,000 commits.
+const MAX_PAGES = 10000;
 
 export default {
   id: 'bitbucket',
@@ -43,7 +45,7 @@ export default {
   },
 
   client(conn, secret) {
-    return new ApiClient({ name: 'Bitbucket', baseUrl: conn.apiUrl || this.defaultApiUrl, headers: { Authorization: this.authHeader(conn, secret) } });
+    return new ApiClient({ name: 'Bitbucket', baseUrl: conn.apiUrl || this.defaultApiUrl, headers: { Authorization: this.authHeader(conn, secret) }, trustedOrigins: ['https://bitbucket.org'] });
   },
 
   async whoami(api, conn) {
@@ -97,11 +99,45 @@ export default {
     }));
   },
 
+  gitHosts() {
+    return ['bitbucket.org'];
+  },
+
   gitAuthHeader(conn, secret) {
     const m = conn.auth?.method;
     if (m === 'access-token') return basic('x-token-auth', secret.token);
     if (m === 'api-token') return basic('x-bitbucket-api-token-auth', secret.token);
     return basic(secret.username || '', secret.token);
+  },
+
+  archive(repo) {
+    return { url: `https://bitbucket.org/${repo.fullName}/get/${encodeURIComponent(repo.defaultBranch)}.tar.gz`, format: 'tgz' };
+  },
+
+  async commits(api, repo, since) {
+    // Newest first, no date filter: read pages until a commit is older than the window.
+    const sinceT = Date.parse(since);
+    const out = [];
+    let lastCommitAt = null;
+    let url = `/repositories/${repo.fullName}/commits/${encodeURIComponent(repo.defaultBranch)}?pagelen=100`;
+    const seen = new Set();
+    while (url && !seen.has(url) && seen.size < MAX_PAGES) {
+      seen.add(url);
+      const page = await api.get(url, { allow404: true });
+      const items = page?.values || [];
+      let older = false;
+      for (const c of items) {
+        const t = Date.parse(c.date);
+        lastCommitAt ??= c.date;
+        if (t < sinceT) {
+          older = true;
+          break;
+        }
+        out.push({ t, email: (c.author?.raw?.match(/<([^>]+)>/) || [])[1] || c.author?.user?.uuid || '', merge: (c.parents?.length || 0) > 1 });
+      }
+      url = older ? null : page?.next || null;
+    }
+    return { commits: out, lastCommitAt };
   },
 };
 

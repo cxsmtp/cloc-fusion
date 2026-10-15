@@ -3,18 +3,23 @@
 //   "token": { "env": "GITHUB_TOKEN" }          read an environment variable (recommended)
 //   "token": { "command": "gh auth token" }     run a command and use what it prints
 //   "token": { "value": "ghp_…" }               stored in the file (the file is written owner-only)
-import { readFile, writeFile, chmod } from 'node:fs/promises';
-import { exec } from 'node:child_process';
+import { readFile, writeFile, chmod, rename, rm } from 'node:fs/promises';
+import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { providerOf } from './providers/index.js';
 
 const run = promisify(exec);
+const runFile = promisify(execFile);
 
 export const DEFAULT_CONFIG_FILE = 'cloc-fusion.config.json';
 
 export const DEFAULTS = Object.freeze({
+  engine: 'auto', // auto (git when installed, else APIs) | git | api
   windowDays: 365,
-  concurrency: 4,
+  concurrency: 8,
+  discoveryConcurrency: 8,
+  repoTimeoutMinutes: 30,
+  maxArchiveBytes: 4 * 1024 ** 3,
   includeArchived: false,
   includeForks: false,
   includeMerges: false,
@@ -60,6 +65,14 @@ export function normalizeConfig(cfg = {}) {
   out.connections = (cfg.connections || []).map((c, i) => {
     if (!c.provider) throw new Error(`connection #${i + 1} has no "provider"`);
     providerOf(c.provider);
+    for (const r of c.repos || []) {
+      const url = typeof r === 'string' ? r : r?.url;
+      let u = null;
+      try {
+        u = new URL(url);
+      } catch {}
+      if (u && (u.username || u.password)) throw new Error(`connection "${c.name || c.provider}": a clone URL holds credentials (${u.host}). Remove them from the URL and use the connection's "auth" instead, so they never reach reports or process lists.`);
+    }
     return { name: c.name || `${c.provider}-${i + 1}`, orgs: 'all', auth: { method: 'none' }, ...c };
   });
   const names = new Set();
@@ -72,8 +85,16 @@ export function normalizeConfig(cfg = {}) {
 
 export async function saveConfig(file, cfg) {
   const holdsSecret = (cfg.connections || []).some((c) => c.auth?.token?.value || c.auth?.password?.value);
-  await writeFile(file, JSON.stringify(cfg, null, 2) + '\n', { mode: holdsSecret ? 0o600 : 0o644 });
-  if (holdsSecret) await chmod(file, 0o600).catch(() => {});
+  // Written to a new file then renamed over the old one, so a token is never in a readable file.
+  const tmp = `${file}.${process.pid}.tmp`;
+  try {
+    await writeFile(tmp, JSON.stringify(cfg, null, 2) + '\n', { mode: holdsSecret ? 0o600 : 0o644, flag: 'wx' });
+    if (holdsSecret) await chmod(tmp, 0o600).catch(() => {});
+    await rename(tmp, file);
+  } catch (err) {
+    await rm(tmp, { force: true }).catch(() => {});
+    throw err;
+  }
 }
 
 /** Resolve one secret reference ({env}|{command}|{value}|string) to its text, or '' when unset. */
@@ -82,7 +103,18 @@ export async function resolveSecret(ref, env = process.env) {
   if (typeof ref === 'string') return ref.startsWith('$') ? env[ref.slice(1)] || '' : ref;
   if (ref.env) return env[ref.env] || '';
   if (ref.value) return String(ref.value);
+  if (Array.isArray(ref.command)) {
+    // Built-in sign-in helpers (gh, az): run directly, no shell. Windows needs the shell for .cmd shims.
+    const [file, ...args] = ref.command;
+    try {
+      const { stdout } = await runFile(file, args, { timeout: 60000, windowsHide: true, shell: process.platform === 'win32' && /^[\w.-]+$/.test(file) && args.every((a) => /^[\w.:/-]+$/.test(a)) });
+      return stdout.trim().split(/\r?\n/).pop() || '';
+    } catch (err) {
+      throw new Error(`"${ref.command.join(' ')}" failed: ${(err.stderr || err.message).trim().split(/\r?\n/)[0]}`);
+    }
+  }
   if (ref.command) {
+    // A command the user typed into their own configuration (a password manager, a vault CLI).
     try {
       const { stdout } = await run(ref.command, { timeout: 60000, windowsHide: true });
       return stdout.trim().split(/\r?\n/).pop() || '';

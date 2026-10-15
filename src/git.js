@@ -12,20 +12,35 @@ import { selectFiles, LocTally } from './loc.js';
 
 const DAY = 86400000;
 
-/** The environment for git: the auth header via GIT_CONFIG_* (never on the command line), no prompts. */
-export function gitEnv(authHeader, base = process.env) {
-  const env = { ...base, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never', GIT_ASKPASS: '', SSH_ASKPASS: '', LC_ALL: 'C' };
-  delete env.GIT_DIR;
-  delete env.GIT_WORK_TREE;
+/**
+ * The environment for git: no prompts, only the expected transport protocols, and the auth header
+ * via GIT_CONFIG_* (never on the command line) scoped to the repository's own origin, so it is
+ * never sent to any other host (a redirect, or a submodule) git might contact.
+ */
+export function gitEnv(authHeader, { origin = null, protocols = 'https', base = process.env } = {}) {
+  const env = { ...base, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'never', GIT_ASKPASS: '', SSH_ASKPASS: '', LC_ALL: 'C', GIT_ALLOW_PROTOCOL: protocols };
+  for (const k of ['GIT_DIR', 'GIT_WORK_TREE', 'GIT_CONFIG_PARAMETERS', 'GIT_SSH_COMMAND']) delete env[k];
+  // No redirects: git would carry the header to the redirect's host for the rest of the clone.
+  const cfg = [['http.followRedirects', 'false']];
   if (authHeader) {
-    env.GIT_CONFIG_COUNT = '2';
-    env.GIT_CONFIG_KEY_0 = 'http.extraHeader';
-    env.GIT_CONFIG_VALUE_0 = `Authorization: ${authHeader}`;
+    cfg.push([origin ? `http.${origin}/.extraHeader` : 'http.extraHeader', `Authorization: ${authHeader}`]);
     // A credential helper on this machine must not answer instead of (or as well as) the header.
-    env.GIT_CONFIG_KEY_1 = 'credential.helper';
-    env.GIT_CONFIG_VALUE_1 = '';
+    cfg.push(['credential.helper', '']);
   }
+  env.GIT_CONFIG_COUNT = String(cfg.length);
+  cfg.forEach(([k, v], i) => {
+    env[`GIT_CONFIG_KEY_${i}`] = k;
+    env[`GIT_CONFIG_VALUE_${i}`] = v;
+  });
   return env;
+}
+
+/** A branch name git accepts and that cannot be mistaken for an option. */
+export function safeBranch(name) {
+  if (name === null || name === undefined) return null;
+  const b = String(name);
+  if (!b || b.startsWith('-') || b.length > 255 || /[\x00-\x20\x7f~^:?*[\\]|\.\.|@\{|\/\/|^\/|\/$|\.lock$|\.$/.test(b)) throw new Error(`unsafe branch name ${JSON.stringify(b.slice(0, 80))}`);
+  return b;
 }
 
 /** Run git; resolves { stdout: Buffer, stderr: string }, rejects with the stderr's gist. */
@@ -175,24 +190,34 @@ export function commitStats(text, { now = Date.now(), weeks = 52 } = {}) {
  * Clone and measure one repository. Returns
  * { headSha, branch, commits, authors, windowDays, weekly, lastCommitAt, loc, files, code, comment, blank, languages, mainLanguage }.
  */
-export async function analyzeRepo(repo, { workDir, authHeader, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countCategories, locBasis, timeoutMs = 30 * 60000, keep = false, now = Date.now(), onPhase = () => {} }) {
+export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = null, allowHttp = false, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countCategories, locBasis, timeoutMs = 30 * 60000, keep = false, now = Date.now(), onPhase = () => {} }) {
   const id = createHash('sha1').update(`${repo.connection}/${repo.cloneUrl}`).digest('hex').slice(0, 10);
   const dir = join(workDir, `${repo.name.replace(/[^\w.-]+/g, '_').slice(0, 40)}-${id}`);
-  const env = gitEnv(authHeader);
+  let url;
+  try {
+    url = new URL(repo.cloneUrl);
+  } catch {
+    throw new Error(`not a clone URL: ${String(repo.cloneUrl).slice(0, 100)}`);
+  }
+  if (!['https:', 'http:', 'file:'].includes(url.protocol)) throw new Error(`unsupported clone URL scheme ${url.protocol}`);
+  if (allowedHosts && !allowedHosts(url.host.toLowerCase())) throw new Error(`refusing to clone from ${url.host}: not a host of this connection`);
+  if (authHeader && url.protocol === 'http:' && !allowHttp) throw new Error(`refusing to send credentials over plain http to ${url.host}`);
+  const branch = safeBranch(repo.defaultBranch);
+  const env = gitEnv(authHeader, { origin: url.protocol === 'file:' ? null : url.origin, protocols: url.protocol === 'file:' ? 'file' : url.protocol === 'http:' ? 'http:https' : 'https' });
   const since = new Date(now - windowDays * DAY).toISOString();
   await rm(dir, { recursive: true, force: true, maxRetries: 3 });
   await mkdir(workDir, { recursive: true });
   try {
     onPhase('clone');
     const base = ['-c', 'core.longpaths=true', 'clone', '--bare', '--quiet', '--filter=blob:none', '--single-branch', '--no-tags'];
-    if (repo.defaultBranch) base.push('--branch', repo.defaultBranch);
+    if (branch) base.push('--branch', branch);
     try {
-      await git([...base, `--shallow-since=${since}`, repo.cloneUrl, dir], { env, timeoutMs });
+      await git([...base, `--shallow-since=${since}`, '--', url.href, dir], { env, timeoutMs });
     } catch (err) {
       // No commit in the window (the server refuses an empty shallow clone): take the tip only.
       if (!/no commits selected|shallow|deepen/i.test(err.message)) throw err;
       await rm(dir, { recursive: true, force: true, maxRetries: 3 });
-      await git([...base, '--depth=1', repo.cloneUrl, dir], { env, timeoutMs });
+      await git([...base, '--depth=1', '--', url.href, dir], { env, timeoutMs });
     }
 
     let headSha;
@@ -201,7 +226,7 @@ export async function analyzeRepo(repo, { workDir, authHeader, windowDays = 365,
     } catch {
       return { empty: true, commits: 0, authors: 0, windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
     }
-    const branch = (await git(['symbolic-ref', '--short', 'HEAD'], { cwd: dir, env }).catch(() => ({ stdout: Buffer.from(repo.defaultBranch || '') }))).stdout.toString().trim();
+    const headBranch = (await git(['symbolic-ref', '--short', 'HEAD'], { cwd: dir, env }).catch(() => ({ stdout: Buffer.from(repo.defaultBranch || '') }))).stdout.toString().trim();
 
     onPhase('history');
     const logArgs = ['log', '--format=%ct%x09%ae', `--since=${since}`];
@@ -239,13 +264,14 @@ export async function analyzeRepo(repo, { workDir, authHeader, windowDays = 365,
     const sum = tally.summary({ countCategories, locBasis });
     return {
       headSha,
-      branch,
+      branch: headBranch,
       commits: stats.commits,
       authors: stats.authors,
       weekly: stats.weekly,
       lastCommitAt: stats.lastCommitAt,
       windowDays: Math.round(effectiveWindow * 10) / 10,
       treeFiles: tree.length,
+      engine: 'git',
       ...sum,
     };
   } finally {

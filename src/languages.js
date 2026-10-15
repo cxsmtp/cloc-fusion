@@ -123,16 +123,21 @@ export function isExcludedPath(path) {
   return GENERATED.some((re) => re.test(path));
 }
 
-/** A glob (*, **, ?) as a RegExp matched against the whole path. */
+/**
+ * A glob (*, **, ?) as a RegExp matched against the whole path. A double star followed by a slash
+ * matches whole folders only, which keeps matching close to linear even on long hostile paths.
+ */
 export function globToRegExp(glob) {
   let re = '';
   for (let i = 0; i < glob.length; i++) {
     const ch = glob[i];
     if (ch === '*') {
       if (glob[i + 1] === '*') {
-        re += '.*';
         i++;
-        if (glob[i + 1] === '/') i++;
+        if (glob[i + 1] === '/') {
+          re += '(?:[^/]*/)*';
+          i++;
+        } else re += '.*';
       } else re += '[^/]*';
     } else if (ch === '?') re += '[^/]';
     else re += ch.replace(/[.+^${}()|[\]\\]/g, '\\$&');

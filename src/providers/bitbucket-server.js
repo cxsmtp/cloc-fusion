@@ -1,5 +1,6 @@
 // Bitbucket Data Center / Server. Organizations are projects.
 import { ApiClient } from '../http.js';
+import { pool } from '../pool.js';
 
 const nextOf = (data, _res, url) => {
   if (!data || data.isLastPage !== false || data.nextPageStart === undefined) return null;
@@ -39,14 +40,14 @@ export default {
 
   async listRepos(api, org) {
     const list = await api.paginate(`/projects/${encodeURIComponent(org)}/repos?limit=100`, { items: (d) => d?.values || [], next: nextOf });
-    const out = [];
-    for (const r of list) {
+    const out = new Array(list.length);
+    await pool(list, 8, async (r, i) => {
       let defaultBranch = null;
       try {
         const b = await api.get(`/projects/${encodeURIComponent(org)}/repos/${encodeURIComponent(r.slug)}/default-branch`, { allow404: true });
         defaultBranch = b?.displayId || null;
       } catch {}
-      out.push({
+      out[i] = {
         id: String(r.id),
         name: r.slug,
         fullName: `${org}/${r.slug}`,
@@ -61,13 +62,45 @@ export default {
         language: null,
         createdAt: null,
         pushedAt: null,
-      });
-    }
+      };
+    });
     return out;
+  },
+
+  gitHosts(conn) {
+    return [new URL(conn.apiUrl).host.toLowerCase()];
   },
 
   gitAuthHeader(_conn, secret) {
     return `Bearer ${secret.token}`;
+  },
+
+  archive(repo) {
+    const [project, slug] = repo.fullName.split('/');
+    return { url: `/projects/${encodeURIComponent(project)}/repos/${encodeURIComponent(slug)}/archive?format=tgz&at=${encodeURIComponent(`refs/heads/${repo.defaultBranch}`)}`, format: 'tgz' };
+  },
+
+  async commits(api, repo, since) {
+    const [project, slug] = repo.fullName.split('/');
+    const sinceT = Date.parse(since);
+    const out = [];
+    let lastCommitAt = null;
+    for (let start = 0, pages = 0; pages < 10000; pages++) {
+      const page = await api.get(`/projects/${encodeURIComponent(project)}/repos/${encodeURIComponent(slug)}/commits?until=${encodeURIComponent(`refs/heads/${repo.defaultBranch}`)}&limit=100&start=${start}`, { allow404: true });
+      let older = false;
+      for (const c of page?.values || []) {
+        lastCommitAt ??= new Date(c.committerTimestamp || c.authorTimestamp).toISOString();
+        const t = c.committerTimestamp || c.authorTimestamp;
+        if (t < sinceT) {
+          older = true;
+          break;
+        }
+        out.push({ t, email: c.author?.emailAddress || c.author?.name || '', merge: (c.parents?.length || 0) > 1 });
+      }
+      if (older || !page || page.isLastPage !== false || !(page.nextPageStart > start)) break;
+      start = page.nextPageStart;
+    }
+    return { commits: out, lastCommitAt };
   },
 };
 

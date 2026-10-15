@@ -5,7 +5,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
 import { DEFAULT_CONFIG_FILE, loadConfig, normalizeConfig } from '../src/config.js';
 import { scan, discover, reprice, VERSION } from '../src/scan.js';
 import { writeReports, consoleSummary, FORMATS } from '../src/report/index.js';
@@ -31,14 +30,16 @@ Options
   --format <list>          Report formats: ${FORMATS.join(',')} (default: all)
   --only <conn[/org],...>  Limit to some connections or organizations
   --limit <n>              Measure at most n repositories (try-out runs)
-  --concurrency <n>        Repositories measured in parallel (default: 4)
+  --engine <auto|git|api>  How repos are measured: git clones, or platform APIs (no git needed).
+                           Default auto: git when installed, else APIs
+  --concurrency <n>        Repositories measured in parallel (default: 8)
   --window-days <n>        Commit history window (default: 365)
   --period-months <n>      Fusion projection period (default: 12)
   --credits-per-10k <n>    Credits per 10K LOC for one Fusion scan (sets/overrides the first model)
   --extra-percent <n>      Extra credits on top, in % (default: 0)
   --bundle-credits <n>     Credits in one bundle (default: 10000)
   --resume <report.json>   Reuse repositories already measured in an earlier (partial) report
-  --work-dir <dir>         Where clones go while measured (default: system temp)
+  --work-dir <dir>         Where clones go while measured (default: a private temp folder)
   --keep-clones            Do not delete clones afterwards
   --input <report.json>    Report to read (price, ai-plan)
   --model <id>             Claude model for ai-plan (default: claude-opus-5-5)
@@ -56,6 +57,9 @@ Examples
 `;
 
 const FLAGS = new Set(['keep-clones', 'quiet', 'anonymize', 'help', 'version']);
+
+// Text from APIs and git is printed without its control characters (no terminal escape tricks).
+const clean = (m) => String(m).replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '');
 
 function parseArgs(argv) {
   const args = { _: [] };
@@ -89,6 +93,10 @@ const numArg = (args, key) => {
 /** Command-line settings over the configuration file's. */
 function applyOptions(cfg, args) {
   const out = { ...cfg, fusion: { ...cfg.fusion }, totals: { ...cfg.totals } };
+  if (args.engine !== undefined) {
+    if (!['auto', 'git', 'api'].includes(args.engine)) throw new Error('--engine must be auto, git or api');
+    out.engine = args.engine;
+  }
   if (numArg(args, 'concurrency') !== undefined) out.concurrency = Math.max(1, Math.floor(numArg(args, 'concurrency')));
   if (numArg(args, 'window-days') !== undefined) out.windowDays = Math.max(7, numArg(args, 'window-days'));
   if (numArg(args, 'period-months') !== undefined) {
@@ -141,7 +149,8 @@ async function main() {
   const configFile = resolve(args.config || DEFAULT_CONFIG_FILE);
   const outDir = resolve(args.out || 'cloc-fusion-output');
   const formats = args.format ? String(args.format).split(',').map((s) => s.trim()) : FORMATS;
-  const log = args.quiet ? () => {} : (m) => console.error(m);
+  // Text from APIs and git is printed without its control characters (no terminal escape tricks).
+  const log = args.quiet ? () => {} : (m) => console.error(clean(m));
   const only = args.only ? String(args.only).split(',').map((s) => s.trim()).filter(Boolean) : [];
 
   if (cmd === 'init' || cmd === 'wizard') {
@@ -151,11 +160,13 @@ async function main() {
   }
 
   if (cmd === 'doctor') {
-    const v = await gitVersion().catch((e) => ({ text: `✗ ${e.message}` }));
+    const v = await gitVersion().catch(() => null);
+    const gitOk = v && (v.major > 2 || (v.major === 2 && v.minor >= 31));
     console.log(`Node.js ${process.versions.node}${Number(process.versions.node.split('.')[0]) < 18 ? '  ✗ needs 18 or newer' : ''}`);
-    console.log(`${v.text}${v.major && (v.major < 2 || (v.major === 2 && v.minor < 31)) ? '  ✗ needs git 2.31 or newer' : ''}`);
+    console.log(v ? `${v.text}${gitOk ? '' : '  (older than 2.31: the API engine is used)'}` : 'git: not installed (fine: the API engine is used, no git needed)');
+    console.log(`Engine: ${gitOk ? 'git' : 'api'} (override with --engine)`);
     const cfg = applyOptions(await loadConfig(configFile), args);
-    const { repos, problems } = await discover(cfg, { only, log: console.log });
+    const { repos, problems } = await discover(cfg, { only, log: (m) => console.log(clean(m)) });
     console.log(`\n${repos.filter((r) => !r.skip).length} repositories to measure, ${repos.filter((r) => r.skip).length} skipped, ${problems.length} problem(s).`);
     if (problems.length) process.exitCode = 1;
     return;
@@ -164,21 +175,19 @@ async function main() {
   if (cmd === 'list') {
     const cfg = applyOptions(await loadConfig(configFile), args);
     const { repos, problems } = await discover(cfg, { only, log });
-    for (const r of repos) console.log(`${r.skip ? '-' : '+'} ${r.connection}  ${r.fullName}${r.skip ? `  (${r.skip})` : ''}`);
+    for (const r of repos) console.log(clean(`${r.skip ? '-' : '+'} ${r.connection}  ${r.fullName}${r.skip ? `  (${r.skip})` : ''}`));
     console.error(`\n${repos.filter((r) => !r.skip).length} to measure, ${repos.filter((r) => r.skip).length} skipped${problems.length ? `, ${problems.length} problem(s)` : ''}.`);
     return;
   }
 
   if (cmd === 'scan') {
-    const v = await gitVersion();
-    if (v.major < 2 || (v.major === 2 && v.minor < 31)) throw new Error(`${v.text}: cloc-fusion needs git 2.31 or newer`);
     const cfg = applyOptions(await loadConfig(configFile), args);
     const resume = args.resume ? JSON.parse(await readFile(resolve(args.resume), 'utf8')) : null;
     const report = await scan(cfg, {
       only,
       limit: numArg(args, 'limit') || 0,
       resume,
-      workDir: resolve(args['work-dir'] || join(tmpdir(), 'cloc-fusion')),
+      workDir: args['work-dir'] ? resolve(args['work-dir']) : null,
       keep: Boolean(args['keep-clones']),
       outDir,
       log,
@@ -226,7 +235,11 @@ async function main() {
 // so re-run with it set. Git reads the proxy variables itself.
 const proxied = process.env.HTTPS_PROXY || process.env.https_proxy || process.env.HTTP_PROXY || process.env.http_proxy;
 if (proxied && !process.env.NODE_USE_ENV_PROXY && Number(process.versions.node.split('.')[0]) >= 22) {
-  const r = spawnSync(process.execPath, ['--disable-warning=UNDICI-EHPA', ...process.argv.slice(1)], { stdio: 'inherit', env: { ...process.env, NODE_USE_ENV_PROXY: '1' } });
+  // A standalone executable takes no Node options on its command line: the argv after it are ours.
+  const standalone = Boolean(process.getBuiltinModule?.('node:sea')?.isSea?.());
+  const argv = standalone ? process.argv.slice(2) : ['--disable-warning=UNDICI-EHPA', ...process.argv.slice(1)];
+  const env = { ...process.env, NODE_USE_ENV_PROXY: '1', ...(standalone ? { NODE_OPTIONS: `${process.env.NODE_OPTIONS || ''} --disable-warning=UNDICI-EHPA`.trim() } : {}) };
+  const r = spawnSync(process.execPath, argv, { stdio: 'inherit', env });
   process.exit(r.status ?? 1);
 }
 

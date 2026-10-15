@@ -33,7 +33,7 @@ export default {
         '  (`az login --allow-no-subscriptions` if your account has no Azure subscription).',
         'Tokens last about an hour; the tool asks for a fresh one when it starts.',
       ],
-      tokenCommand: () => `az account get-access-token --resource ${ADO_RESOURCE} --query accessToken -o tsv`,
+      tokenCommand: () => ['az', 'account', 'get-access-token', '--resource', ADO_RESOURCE, '--query', 'accessToken', '-o', 'tsv'],
       bearer: true,
     },
   ],
@@ -43,7 +43,7 @@ export default {
   },
 
   client(conn, secret) {
-    return new ApiClient({ name: 'Azure DevOps', baseUrl: (conn.apiUrl || this.defaultApiUrl).replace(/\/+$/, ''), headers: { Authorization: this.authHeader(conn, secret) } });
+    return new ApiClient({ name: 'Azure DevOps', baseUrl: (conn.apiUrl || this.defaultApiUrl).replace(/\/+$/, ''), headers: { Authorization: this.authHeader(conn, secret) }, trustedOrigins: isCloud(conn) ? [VSSPS] : [] });
   },
 
   async whoami(api, conn) {
@@ -78,6 +78,7 @@ export default {
       id: r.id,
       name: r.name,
       fullName: `${org}/${r.project?.name}/${r.name}`,
+      project: r.project?.name,
       cloneUrl: stripUser(r.remoteUrl),
       webUrl: r.webUrl,
       defaultBranch: r.defaultBranch ? r.defaultBranch.replace(/^refs\/heads\//, '') : null,
@@ -92,8 +93,46 @@ export default {
     }));
   },
 
+  gitHosts(conn) {
+    if (!isCloud(conn)) return [new URL(conn.apiUrl).host.toLowerCase()];
+    return null; // dev.azure.com or <org>.visualstudio.com: checked by suffix in allowedHost
+  },
+
+  allowedHost(conn, host) {
+    if (!isCloud(conn)) return host === new URL(conn.apiUrl).host.toLowerCase();
+    return host === 'dev.azure.com' || host.endsWith('.visualstudio.com');
+  },
+
   gitAuthHeader(conn, secret) {
     return this.authHeader(conn, secret);
+  },
+
+  repoApi(repo, conn) {
+    const base = (conn.apiUrl || this.defaultApiUrl).replace(/\/+$/, '');
+    return `${base}/${encodeURIComponent(repo.org)}/${encodeURIComponent(repo.project)}/_apis/git/repositories/${encodeURIComponent(repo.id)}`;
+  },
+
+  archive(repo, conn) {
+    const v = encodeURIComponent(repo.defaultBranch);
+    return { url: `${this.repoApi(repo, conn)}/items?path=%2F&versionDescriptor.versionType=branch&versionDescriptor.version=${v}&%24format=zip&download=true&${API}`, format: 'zip' };
+  },
+
+  async commits(api, repo, since, conn) {
+    const v = encodeURIComponent(repo.defaultBranch);
+    const base = `${this.repoApi(repo, conn)}/commits?searchCriteria.itemVersion.version=${v}&${API}`;
+    const out = [];
+    for (let skip = 0; skip < 10000000; skip += 1000) {
+      const page = await api.get(`${base}&searchCriteria.fromDate=${encodeURIComponent(since)}&searchCriteria.%24top=1000&searchCriteria.%24skip=${skip}`);
+      const items = page?.value || [];
+      // The list has no parents; Azure DevOps names pull request merges "Merged PR …".
+      for (const c of items) out.push({ t: Date.parse(c.committer?.date || c.author?.date), email: c.author?.email || '', merge: /^Merged PR \d+/.test(c.comment || '') });
+      if (items.length < 1000) break;
+    }
+    if (!out.length) {
+      const last = await api.get(`${base}&searchCriteria.%24top=1`);
+      return { commits: out, lastCommitAt: last?.value?.[0]?.committer?.date ?? null };
+    }
+    return { commits: out };
   },
 };
 

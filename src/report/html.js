@@ -35,7 +35,7 @@ export function toHtml(report) {
     c: r.connection,
     o: r.org,
     n: r.fullName,
-    u: r.webUrl || null,
+    u: /^https?:\/\//i.test(r.webUrl || '') ? r.webUrl : null,
     lg: r.mainLanguage || '',
     loc: r.lines ?? r.loc ?? null,
     cm: r.commits ?? null,
@@ -89,6 +89,7 @@ tr.dim td{color:var(--muted)}
 .warn{color:var(--warn)}.bad{color:var(--bad)}.ok{color:var(--ok)}
 .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(360px,100%),1fr));gap:16px}.grid2>div{min-width:0}
 .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 10px}
+button{font:inherit;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 14px;cursor:pointer}
 input,select{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px}
 input[type=search]{flex:1;min-width:200px}
 #repos th{cursor:pointer;user-select:none}#repos th[aria-sort]::after{content:" ↕";color:var(--muted)}
@@ -143,6 +144,7 @@ ${creditsKpi}
 <thead><tr>
 <th data-k="n">Repository</th><th data-k="o">Organization</th><th data-k="lg">Language</th><th class="n" data-k="loc">LOC</th><th class="n" data-k="cm">Commits</th><th class="n" data-k="cw">Commits / wk</th><th data-k="w">Last 52 weeks</th><th class="n" data-k="au">Authors</th><th data-k="lc">Last commit</th><th data-k="fr">Change frequency</th><th class="n" data-k="sc">Fusion scans</th><th class="n" data-k="un">10K units</th><th data-k="md">Model</th><th class="n" data-k="cd">Credits</th><th data-k="st">Status</th>
 </tr></thead><tbody></tbody></table></div>
+<div class="tools" style="margin-top:10px"><button type="button" id="more" hidden>Show more</button><button type="button" id="all" hidden>Show all</button></div>
 
 ${report.problems?.length ? `<h2>Problems</h2><div class="card"><table><thead><tr><th>Connection</th><th>Organization</th><th>Problem</th></tr></thead><tbody>${report.problems.map((p) => `<tr><td>${esc(p.connection)}</td><td>${esc(p.org || '')}</td><td class="bad" style="white-space:normal">${esc(p.error)}</td></tr>`).join('')}</tbody></table></div>` : ''}
 
@@ -154,7 +156,7 @@ ${report.problems?.length ? `<h2>Problems</h2><div class="card"><table><thead><t
 var rows=JSON.parse(document.getElementById('data').textContent);
 var FQ=${JSON.stringify(report.byFrequency.map((b) => b.id))};
 var tbody=document.querySelector('#repos tbody'),q=document.getElementById('q'),fq=document.getElementById('fq'),st=document.getElementById('st'),count=document.getElementById('count');
-var sortKey='cd',dir=-1;
+var sortKey='cd',dir=-1,PAGE=250,limit=PAGE,more=document.getElementById('more'),all=document.getElementById('all');
 function fmt(n,d){return n===null||n===undefined||n===''?'—':Number(n).toLocaleString('en-US',{maximumFractionDigits:d||0})}
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function spark(w){if(!w||!w.length)return'';var m=Math.max.apply(null,w.concat([1])),W=104,H=20,s='';for(var i=0;i<w.length;i++){var h=w[i]?Math.max(2,Math.round(w[i]/m*H)):0;if(h)s+='<rect x="'+(i*2)+'" y="'+(H-h)+'" width="1.5" height="'+h+'"/>'}return'<svg class="spark" width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" fill="currentColor" style="color:var(--bar)" aria-label="weekly commits">'+s+'</svg>'}
@@ -168,14 +170,16 @@ if(s==='skip'&&['ok','failed','empty','pending'].indexOf(r.st)>=0)return false;
 if(s&&s!=='skip'&&r.st!==s)return false;return true});
 list.sort(function(a,b){var x=val(a,sortKey),y=val(b,sortKey);if(x===y)return a.n.localeCompare(b.n);if(x===null||x===undefined||x==='')return 1;if(y===null||y===undefined||y==='')return -1;return(typeof x==='number'?x-y:String(x).localeCompare(String(y)))*dir});
 count.textContent=list.length+' of '+rows.length;
-tbody.innerHTML=list.map(function(r){
-var name=r.u?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
+var shown=list.slice(0,limit);more.hidden=all.hidden=shown.length>=list.length;more.textContent='Show '+Math.min(PAGE,list.length-shown.length)+' more';all.textContent='Show all '+list.length;
+tbody.innerHTML=shown.map(function(r){
+var name=r.u&&/^https?:\/\//i.test(r.u)?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
 var status=r.st==='ok'?'<span class="ok">measured</span>':r.st==='failed'?'<span class="bad" title="'+esc(r.er)+'">failed</span>':'<span class="warn">'+esc(r.st)+'</span>';
 return '<tr><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.lg)+'</td><td class="n">'+fmt(r.loc)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.fq)+'</td><td class="n">'+fmt(r.sc)+'</td><td class="n">'+fmt(r.un)+'</td><td>'+esc(r.md)+'</td><td class="n">'+fmt(r.cd,1)+'</td><td>'+status+'</td></tr>'}).join('');
 document.querySelectorAll('#repos th').forEach(function(th){th.setAttribute('aria-sort',th.dataset.k===sortKey?(dir>0?'ascending':'descending'):'none')});
 }
 document.querySelectorAll('#repos th').forEach(function(th){th.addEventListener('click',function(){var k=th.dataset.k;if(k===sortKey)dir=-dir;else{sortKey=k;dir=['n','o','lg','md','st','fr','lc'].indexOf(k)>=0?1:-1}render()})});
-[q,fq,st].forEach(function(el){el.addEventListener('input',render)});
+var timer;[q,fq,st].forEach(function(el){el.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){limit=PAGE;render()},120)})});
+more.addEventListener('click',function(){limit+=PAGE;render()});all.addEventListener('click',function(){limit=Infinity;render()});
 render();
 })();
 </script>

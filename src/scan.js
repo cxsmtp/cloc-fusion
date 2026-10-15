@@ -2,14 +2,16 @@
 // lines of code and commit history; then the Fusion suggestion and credits for all of them.
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { providerOf } from './providers/index.js';
 import { resolveCredentials, redactConfig } from './config.js';
-import { analyzeRepo } from './git.js';
+import { analyzeRepo, gitVersion } from './git.js';
+import { analyzeRepoApi } from './apiengine.js';
+import { pool } from './pool.js';
 import { frequencyOf, frequencyLabel, fusionEstimate, creditSummary } from './fusion.js';
 import { globToRegExp } from './languages.js';
 
-export const VERSION = '1.0.0';
+export const VERSION = '1.1.0';
 
 const keyOf = (r) => `${r.connection}|${r.fullName}`;
 
@@ -30,21 +32,41 @@ export async function orgsOf(conn, session) {
   return all.map((o) => o.id).filter((id) => id !== '@me' || conn.includePersonal);
 }
 
-/** Does a configured override apply to this repository? Keys are full names or globs. */
-function overrideFor(cfg, repo) {
-  const out = {};
-  for (const [pattern, o] of Object.entries(cfg.overrides || {})) {
-    const re = globToRegExp(pattern);
-    if (re.test(repo.fullName) || re.test(`${repo.connection}:${repo.fullName}`)) Object.assign(out, o);
-  }
-  return out;
+/** The configured overrides, compiled once: (repo) → the override settings that apply to it. */
+function overrideMatcher(cfg) {
+  const rules = Object.entries(cfg.overrides || {}).map(([pattern, o]) => [globToRegExp(pattern), o]);
+  return (repo) => {
+    const out = {};
+    for (const [re, o] of rules) if (re.test(repo.fullName) || re.test(`${repo.connection}:${repo.fullName}`)) Object.assign(out, o);
+    return out;
+  };
 }
 
-/** Every repository to measure, with the reason any is left out. */
+/** (host) → may this connection's clone URLs point there? Generic connections: the URLs the user typed. */
+function allowedHostsOf(provider, conn) {
+  if (provider.allowedHost) return (host) => provider.allowedHost(conn, host);
+  if (provider.gitHosts) {
+    const hosts = provider.gitHosts(conn);
+    if (hosts) return (host) => hosts.includes(host);
+  }
+  return null;
+}
+
+/** Which engine measures repositories: git when it is installed (2.31+), else the platform APIs. */
+export async function chooseEngine(requested = 'auto') {
+  if (requested === 'api') return 'api';
+  const v = await gitVersion().catch(() => null);
+  const ok = v && (v.major > 2 || (v.major === 2 && v.minor >= 31));
+  if (requested === 'git' && !ok) throw new Error(v ? `${v.text}: the git engine needs git 2.31 or newer (or use --engine api)` : 'git is not installed: use --engine api, or install git');
+  return ok ? 'git' : 'api';
+}
+
+/** Every repository to measure, with the reason any is left out. Organizations are listed in parallel. */
 export async function discover(cfg, { only = [], log = () => {} } = {}) {
   const repos = [];
   const problems = [];
   const sessions = new Map();
+  const overrideFor = overrideMatcher(cfg);
   for (const conn of cfg.connections) {
     if (only.length && !only.some((o) => o === conn.name || o.startsWith(`${conn.name}/`))) continue;
     let session;
@@ -69,19 +91,22 @@ export async function discover(cfg, { only = [], log = () => {} } = {}) {
     if (orgFilter.length) orgs = orgs.filter((o) => orgFilter.includes(o));
     const inc = (conn.include || []).map(globToRegExp);
     const exc = (conn.exclude || []).map(globToRegExp);
-    for (const org of orgs) {
-      let list;
+    const lists = new Array(orgs.length);
+    await pool(orgs, cfg.discoveryConcurrency || 8, async (org, i) => {
       try {
-        list = await session.provider.listRepos(session.api, org, conn);
+        lists[i] = await session.provider.listRepos(session.api, org, conn);
       } catch (err) {
         problems.push({ connection: conn.name, org, error: err.message });
         log(`  ✗ ${org}: ${err.message}`);
-        continue;
       }
+    });
+    orgs.forEach((org, i) => {
+      const list = lists[i];
+      if (!list) return;
       let kept = 0;
       for (const r of list) {
         const repo = { ...r, provider: conn.provider, connection: conn.name, org };
-        const o = overrideFor(cfg, repo);
+        const o = overrideFor(repo);
         let skip = null;
         if (!cfg.includeArchived && repo.archived) skip = 'archived';
         else if (!cfg.includeForks && repo.fork) skip = 'fork';
@@ -92,34 +117,35 @@ export async function discover(cfg, { only = [], log = () => {} } = {}) {
         if (!skip) kept++;
       }
       log(`  ${org}: ${list.length} repositories (${kept} to measure)`);
-    }
+    });
   }
-  // The same repository reached twice (two connections, or a group and a subgroup) counts once.
-  const seen = new Set();
-  const unique = repos.filter((r) => {
+  // The same repository reached twice (two connections, or a group and a subgroup) counts once;
+  // a copy that is measured wins over one that is skipped.
+  const byKey = new Map();
+  for (const r of repos) {
     const k = r.cloneUrl?.toLowerCase().replace(/\.git$/, '') || keyOf(r);
-    if (seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-  return { repos: unique, problems, sessions };
-}
-
-/** Run `fn` over `items` with at most `n` at a time. */
-async function pool(items, n, fn) {
-  let next = 0;
-  const workers = Array.from({ length: Math.max(1, Math.min(n, items.length)) }, async () => {
-    while (next < items.length) {
-      const i = next++;
-      await fn(items[i], i);
-    }
-  });
-  await Promise.all(workers);
+    const had = byKey.get(k);
+    if (!had || (had.skip && !r.skip)) byKey.set(k, r);
+  }
+  return { repos: [...byKey.values()], problems, sessions };
 }
 
 /** Measure every repository and price Fusion for them. Returns the report object. */
-export async function scan(cfg, { only = [], limit = 0, resume = null, workDir = join(tmpdir(), 'cloc-fusion'), keep = false, outDir = null, log = () => {}, progress = () => {} } = {}) {
+export async function scan(cfg, { only = [], limit = 0, resume = null, workDir = null, keep = false, outDir = null, log = () => {}, progress = () => {} } = {}) {
   const started = Date.now();
+  // A private, random work folder per run (never a predictable shared path in /tmp).
+  const ownWorkDir = !workDir;
+  if (ownWorkDir) workDir = await mkdtemp(join(tmpdir(), 'cloc-fusion-'));
+  try {
+    return await runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, progress, started });
+  } finally {
+    if (ownWorkDir && !keep) await rm(workDir, { recursive: true, force: true, maxRetries: 3 }).catch(() => {});
+  }
+}
+
+async function runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, progress, started }) {
+  const engine = await chooseEngine(cfg.engine);
+  log(`Engine: ${engine === 'git' ? 'git (shallow, blob-less clones)' : 'platform APIs (no git needed)'}`);
   const { repos, problems, sessions } = await discover(cfg, { only, log });
   const previous = new Map((resume?.repos || []).filter((r) => !r.error && r.analyzedAt).map((r) => [keyOf(r), r]));
   let todo = repos.filter((r) => !r.skip);
@@ -138,19 +164,25 @@ export async function scan(cfg, { only = [], limit = 0, resume = null, workDir =
       const session = sessions.get(repo.connection);
       const conn = cfg.connections.find((c) => c.name === repo.connection);
       try {
-        const m = await analyzeRepo(repo, {
+        const options = {
           workDir,
           keep,
-          authHeader: session.provider.gitAuthHeader(conn, session.secret),
           windowDays: cfg.windowDays,
           includeMerges: cfg.includeMerges,
           exclude: [...(cfg.exclude || []), ...(conn.excludePaths || [])],
           include: cfg.include || [],
           maxFileBytes: cfg.maxFileBytes,
+          maxArchiveBytes: cfg.maxArchiveBytes,
           countCategories: cfg.countCategories,
           locBasis: cfg.locBasis,
+          timeoutMs: (cfg.repoTimeoutMinutes || 30) * 60000,
           onPhase: (phase) => progress({ done, total: todo.length, current: repo.fullName, phase }),
-        });
+        };
+        // Generic Git servers have no API: always git.
+        const m =
+          engine === 'git' || repo.provider === 'generic'
+            ? await analyzeRepo(repo, { ...options, authHeader: session.provider.gitAuthHeader(conn, session.secret), allowedHosts: allowedHostsOf(session.provider, conn), allowHttp: conn.provider === 'generic' || /^http:\/\//i.test(conn.apiUrl || '') })
+            : await analyzeRepoApi(repo, { ...options, session, conn });
         results.set(keyOf(repo), { ...repo, ...m, analyzedAt: new Date().toISOString() });
       } catch (err) {
         results.set(keyOf(repo), { ...repo, error: err.message });
@@ -168,7 +200,7 @@ export async function scan(cfg, { only = [], limit = 0, resume = null, workDir =
   return report;
 }
 
-const MEASURED = ['headSha', 'branch', 'commits', 'authors', 'weekly', 'lastCommitAt', 'windowDays', 'treeFiles', 'loc', 'files', 'code', 'comment', 'blank', 'byCategory', 'languages', 'mainLanguage', 'empty', 'analyzedAt'];
+const MEASURED = ['engine', 'headSha', 'branch', 'commits', 'authors', 'weekly', 'lastCommitAt', 'windowDays', 'treeFiles', 'loc', 'files', 'code', 'comment', 'blank', 'byCategory', 'languages', 'mainLanguage', 'empty', 'analyzedAt'];
 const pick = (r) => Object.fromEntries(MEASURED.filter((k) => r[k] !== undefined).map((k) => [k, r[k]]));
 
 async function checkpoint(outDir, cfg, repos, results, problems) {
@@ -197,7 +229,7 @@ export function buildReport(cfg, repos, problems = [], { started = Date.now(), p
   const known = estimate.totals.units > 0 ? estimate.totals.unknownRate === 0 : true;
   const summary = { ...creditSummary(known ? estimate.totals.credits : NaN, cfg.totals), known };
   const measured = estimate.rows.filter((r) => r.analyzedAt && !r.error);
-  const languages = {};
+  const languages = Object.create(null);
   for (const r of measured) {
     for (const [name, t] of Object.entries(r.languages || {})) {
       const l = (languages[name] ||= { category: t.category, repos: 0, files: 0, code: 0, comment: 0, blank: 0 });
