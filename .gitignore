@@ -1,0 +1,5 @@
+node_modules/
+cloc-fusion-output/
+cloc-fusion.config.json
+*.log
+.DS_Store

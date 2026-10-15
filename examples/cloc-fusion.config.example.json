@@ -1,0 +1,72 @@
+{
+  "windowDays": 365,
+  "concurrency": 4,
+  "includeArchived": false,
+  "includeForks": false,
+  "includeMerges": false,
+  "locBasis": "code",
+  "countCategories": ["code", "markup", "iac"],
+  "exclude": ["**/test/**", "**/tests/**", "**/*.spec.ts"],
+  "connections": [
+    {
+      "name": "github",
+      "provider": "github",
+      "auth": { "method": "pat", "token": { "env": "GITHUB_TOKEN" } },
+      "orgs": ["acme", "acme-labs"]
+    },
+    {
+      "name": "github-enterprise",
+      "provider": "github",
+      "apiUrl": "https://github.acme.internal/api/v3",
+      "auth": { "method": "gh-cli" },
+      "orgs": "all"
+    },
+    {
+      "name": "gitlab",
+      "provider": "gitlab",
+      "auth": { "method": "pat", "token": { "env": "GITLAB_TOKEN" } },
+      "orgs": ["acme-group"],
+      "exclude": ["acme-group/sandbox/*"]
+    },
+    {
+      "name": "azure",
+      "provider": "azure",
+      "auth": { "method": "entra" },
+      "orgs": ["acme", "acme-emea"]
+    },
+    {
+      "name": "bitbucket",
+      "provider": "bitbucket",
+      "auth": { "method": "api-token", "username": "you@acme.com", "token": { "command": "op read op://Engineering/bitbucket/token" } },
+      "orgs": "all"
+    },
+    {
+      "name": "bitbucket-dc",
+      "provider": "bitbucket-server",
+      "apiUrl": "https://bitbucket.acme.internal",
+      "auth": { "method": "http-token", "token": { "env": "BITBUCKET_SERVER_TOKEN" } },
+      "orgs": ["PAY", "CORE"]
+    },
+    {
+      "name": "gitea",
+      "provider": "generic",
+      "auth": { "method": "basic", "username": "svc-scan", "token": { "env": "GITEA_TOKEN" } },
+      "repos": ["https://git.acme.internal/platform/api.git", { "url": "https://git.acme.internal/platform/web.git", "branch": "develop" }]
+    }
+  ],
+  "fusion": {
+    "periodMonths": 12,
+    "combine": "higher",
+    "models": [
+      { "id": "standard", "name": "Fusion", "creditsPer10k": null }
+    ],
+    "byFrequency": {},
+    "byCriticality": { "5": { "scans": 52 }, "4": { "scans": 26 } }
+  },
+  "totals": { "extraPercent": 10, "bundleCredits": 10000 },
+  "overrides": {
+    "acme/payments-*": { "criticality": 5 },
+    "acme/legacy-monolith": { "scans": 4 },
+    "acme-labs/*": { "exclude": true }
+  }
+}
