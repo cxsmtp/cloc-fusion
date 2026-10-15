@@ -219,7 +219,9 @@ node scripts/build-binary.mjs     # standalone executable for this OS → dist/
 
 ### Versions and updates
 
-The version lives in one place (`src/version.js`). Tests keep it in step with `package.json` and the newest [CHANGELOG.md](CHANGELOG.md) entry, and every release is a git tag `vX.Y.Z` whose notes are that changelog entry.
+The version lives in one place (`src/version.js`). Tests keep it in step with `package.json` and the newest [CHANGELOG.md](CHANGELOG.md) entry.
+
+**Releasing:** bump the version, add its CHANGELOG entry, and push to the default branch. CI then tags the commit `vX.Y.Z`, builds the five executables, and publishes the release with `SHA256SUMS.txt`, using that changelog entry as the notes. Pushing a `v*` tag yourself works too.
 
 ```
 cloc-fusion version        # e.g. 1.2.0 · standalone executable · built 2026-10-15 from 1a2b3c4d5e6f

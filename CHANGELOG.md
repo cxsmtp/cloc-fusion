@@ -13,7 +13,12 @@ The next-gen look, and always knowing which version you have.
   - `update --check` only checks and exits with code 10 when an update is available;
   - private repositories use `GITHUB_TOKEN` or `gh auth login`.
 - **Update notice.** `scan`, `list`, `doctor`, `price` and `init` check for a newer release at most once a day and print a one-line notice at the end. It never delays a command by more than about 2.5 s, is skipped in CI, and is turned off with `CLOC_FUSION_NO_UPDATE_CHECK=1`.
-- **Version-controlled releases.** One version source (`src/version.js`), checked against `package.json` and the newest CHANGELOG entry by `test/version.test.js`. Each release is a git tag `vX.Y.Z`. The release workflow refuses a tag that doesn't match, and uses the version's CHANGELOG section as the release notes.
+- **Version-controlled releases.** One version source (`src/version.js`), checked against `package.json` and the newest CHANGELOG entry by `test/version.test.js`. Pushing a new version to the default branch makes CI:
+  - create the git tag `vX.Y.Z`;
+  - build and smoke-test the executables (each must report that version);
+  - publish the release with `SHA256SUMS.txt`, using the version's CHANGELOG section as the notes.
+
+  A mismatched tag, version or changelog stops the release.
 - **Next-gen report look**, from the Cx Detection Date Base Reminder app's design (`nextgen.css`):
   - **Themes and accents:** Obsidian (dark, the default) and Daylight, plus Auto. Five accents: indigo, cyan, emerald, violet and amber. The choice is remembered on each device.
   - **Surfaces:** glass panels over an ambient aurora glow, with the accent's indigo → cyan gradients. Plus Jakarta Sans and JetBrains Mono are embedded (SIL OFL 1.1, `assets/fonts`), so the report renders the same offline.
