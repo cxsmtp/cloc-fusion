@@ -2,6 +2,11 @@
 
 All notable changes to cloc-fusion. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Benchmark and test fault injection is deterministic: a share of URLs fail on their first attempt only. Retries are exercised on every run, and no run can exhaust them by chance (a CI run on Windows did).
+
 ## [1.2.0] - 2026-10-15
 
 The next-gen look, and always knowing which version you have.

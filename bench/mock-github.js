@@ -1,7 +1,7 @@
 // A GitHub-compatible mock API for tests and benchmarks: any number of organizations and
 // repositories, paginated like GitHub (Link headers, 100 per page), commit lists, and tarballs
 // served through a redirect to a second "codeload" origin (which must never see the token).
-// Optional fault injection: a share of requests answered 429 (Retry-After: 0) or 502.
+// Optional fault injection: a share of URLs answered 429 (Retry-After: 0) or 502 on their first attempt.
 import http from 'node:http';
 import { gzipSync } from 'node:zlib';
 
@@ -56,6 +56,13 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
   const stats = { requests: 0, faults: 0, tokenLeaks: 0, unauthorized: 0 };
   const profileOf = (o, i) => PROFILES[(o * reposPerOrg + i) % PROFILES.length];
   let codeloadUrl = '';
+  const faulted = new Set();
+  // A stable pseudo-random number in [0, 1) for a string (FNV-1a).
+  const hash = (str) => {
+    let h = 2166136261;
+    for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
+    return (h >>> 0) / 4294967296;
+  };
 
   const commitsFor = (p, sinceT) => {
     const out = [];
@@ -84,9 +91,12 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
   const api = http.createServer(async (req, res) => {
     stats.requests++;
     if (latencyMs) await new Promise((r) => setTimeout(r, latencyMs));
-    if (faultRate && Math.random() < faultRate) {
+    // Faults: a share of URLs fail on their first attempt (429 or 502), then succeed, so retries
+    // are exercised on every run without a run ever being unlucky enough to exhaust them.
+    if (faultRate && !faulted.has(req.url) && hash(req.url) < faultRate) {
+      faulted.add(req.url);
       stats.faults++;
-      if (Math.random() < 0.5) res.writeHead(429, { 'retry-after': '0' });
+      if (hash(`${req.url}#kind`) < 0.5) res.writeHead(429, { 'retry-after': '0' });
       else res.writeHead(502);
       return res.end();
     }
