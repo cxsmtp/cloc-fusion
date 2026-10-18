@@ -18,6 +18,8 @@ const HELP = `cloc-fusion ${VERSION} — lines of code, commit activity and Fusi
 Usage: cloc-fusion <command> [options]
 
 Commands
+  ui                   The web app (the default with no command): sign in through the browser,
+                       set Fusion pricing, run the scan and watch the credits add up
   init                 Wizard: connect GitHub / GitLab / Azure DevOps / Bitbucket / any Git,
                        pick organizations, set Fusion pricing, save the configuration
   scan                 Discover every repository, measure LOC and commits, write the reports
@@ -50,10 +52,13 @@ Options
   --model <id>             Claude model for ai-plan (default: claude-opus-5-5)
   --output <file>          ai-plan: where to save the plan (default: <out>/cloc-fusion-onboarding-plan.md)
   --anonymize              ai-plan: replace repository and organization names with hashes
+  --port <n>               ui: local port (default: 4747; 127.0.0.1 only)
+  --no-open                ui: do not open the browser
   --quiet                  Less output
   -h, --help / -v, --version
 
 Examples
+  cloc-fusion
   cloc-fusion init
   cloc-fusion scan --credits-per-10k 2.5
   cloc-fusion scan --only github-github.com/acme --limit 20
@@ -61,7 +66,7 @@ Examples
   cloc-fusion ai-plan --input cloc-fusion-output/cloc-fusion-report.json
 `;
 
-const FLAGS = new Set(['keep-clones', 'quiet', 'anonymize', 'help', 'version', 'all', 'check', 'force']);
+const FLAGS = new Set(['no-open', 'keep-clones', 'quiet', 'anonymize', 'help', 'version', 'all', 'check', 'force']);
 
 // Text from APIs and git is printed without its control characters (no terminal escape tricks).
 const clean = (m) => String(m).replace(/[\x00-\x08\x0b-\x1f\x7f-\x9f]/g, '');
@@ -161,7 +166,7 @@ async function main() {
 }
 
 async function runCommand(cmd, args) {
-  if (args.help || !cmd || cmd === 'help') return console.log(HELP);
+  if (args.help || cmd === 'help') return console.log(HELP);
   const configFile = resolve(args.config || DEFAULT_CONFIG_FILE);
   const outDir = resolve(args.out || 'cloc-fusion-output');
   const formats = args.format ? String(args.format).split(',').map((s) => s.trim()) : FORMATS;
@@ -170,6 +175,20 @@ async function runCommand(cmd, args) {
   // ✓ and ✗ in green and red when the terminal has colour.
   const log = args.quiet ? () => {} : (m) => console.error(clean(m).replace(/^(\s*)✓/, `$1${p.ok}`).replace(/^(\s*)✗/, `$1${p.fail}`));
   const only = args.only ? String(args.only).split(',').map((s) => s.trim()).filter(Boolean) : [];
+
+  if (!cmd || cmd === 'ui') {
+    const { startUi } = await import('../src/ui/server.js');
+    const port = args.port !== undefined ? Number(args.port) : 4747;
+    if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error('--port must be a port number');
+    const ui = await startUi({ configFile, outDir, port, open: !args['no-open'], log });
+    console.log(`\n  cloc-fusion ${VERSION} is running at ${ui.url}\n  (this address works only on this computer; press Ctrl+C to stop)\n`);
+    await new Promise((done) => {
+      const stop = () => ui.close().finally(done);
+      process.once('SIGINT', stop);
+      process.once('SIGTERM', stop);
+    });
+    return;
+  }
 
   if (cmd === 'version') {
     const b = buildInfo();
@@ -262,14 +281,28 @@ async function runCommand(cmd, args) {
 
   if (cmd === 'price') {
     const report = await readReport(args);
+    // The configuration file, or settings downloaded from a report ("Tune the plan"): only its
+    // Fusion pricing, totals and repository rules are used here.
     let cfg = {};
+    let text = null;
     try {
-      const fileCfg = await loadConfig(configFile);
-      cfg = { fusion: fileCfg.fusion, totals: fileCfg.totals };
-    } catch {}
+      text = await readFile(configFile, 'utf8');
+    } catch (err) {
+      if (args.config) throw new Error(`could not read ${configFile}: ${err.message}`);
+    }
+    if (text !== null) {
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (err) {
+        throw new Error(`${configFile} is not valid JSON: ${err.message}`);
+      }
+      const n = normalizeConfig({ ...data, connections: [] });
+      cfg = { fusion: data.fusion ? n.fusion : undefined, totals: data.totals ? n.totals : undefined, overrides: data.overrides ? n.overrides : undefined };
+    }
     const base = normalizeConfig({ ...report.settings, connections: [], ...cfg, fusion: cfg.fusion || report.settings.fusion, totals: cfg.totals || report.settings.totals });
     const next = applyOptions(base, args);
-    const priced = reprice(report, { fusion: next.fusion, totals: next.totals });
+    const priced = reprice(report, { fusion: next.fusion, totals: next.totals, ...(cfg.overrides ? { overrides: cfg.overrides } : {}) });
     priced.settings.connections = report.settings.connections;
     const written = await writeReports(priced, outDir, formats, args.name || 'cloc-fusion-report');
     if (!args.quiet) console.log(consoleSummary(priced));

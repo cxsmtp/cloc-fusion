@@ -4,6 +4,9 @@
 
 cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as many organizations as you have. For every repository it counts lines of code and recent commits. From the commit rate it suggests how often the repository needs a Fusion scan, then works out the credits your whole estate needs. The answer is an HTML, CSV, JSON and Markdown report.
 
+- **A web app, not a command line.** Run it and your browser opens: sign in through the browser, check the pricing, press *Run the Fusion scan*, and watch the credits add up.
+- **On-premises.** It runs on your machine, next to your own GitHub Enterprise Server, GitLab, Azure DevOps Server or Bitbucket Data Center as well as the cloud platforms. Code, figures and tokens stay with you; there is no cloud service in between.
+- **You choose the models.** Pick which Fusion model each repository gets by change frequency, criticality or one by one, in the app or right in the HTML report, and every total follows.
 - **Nothing to install.** One file for Windows, macOS or Linux, with no runtime, git or packages needed.
 - **Every platform, every organization**, picked in a guided setup that also handles SSO sign-in.
 - **Built for scale:** benchmarked at 10,000 repositories, with 47,000+ API calls and injected failures, and 0 lost ([benchmarks](docs/BENCHMARKS.md)).
@@ -15,16 +18,11 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
 
 1. **Download** the file for your system from [Releases](../../releases), or from the *Standalone executables* workflow run's artifacts:
    `cloc-fusion-windows-x64.exe` · `cloc-fusion-macos-arm64` · `cloc-fusion-macos-x64` · `cloc-fusion-linux-x64` · `cloc-fusion-linux-arm64`
-2. **Connect** your platforms:
-   ```
-   cloc-fusion init
-   ```
-3. **Scan** and open `cloc-fusion-output/cloc-fusion-report.html`:
-   ```
-   cloc-fusion scan
-   ```
+2. **Run it.** Double-click the file, or run `cloc-fusion` with no arguments. The web app opens in your browser at `http://127.0.0.1:4747`, already set up with sensible defaults (two Fusion models, 20% headroom, bundles of 10,000 credits, the last 365 days of commits).
+3. **Sign in** to each connection with the *Sign in* button: GitHub through your browser, Microsoft Entra ID for Azure DevOps, or a token page opened with the right permissions ticked.
+4. **Run the Fusion scan.** Progress and the credit estimate update live; open the full report when it is done.
 
-On macOS or Linux, run `chmod +x` on the file first. If you have Node.js 18+, you can also run it from source with `node bin/cloc-fusion.js`.
+On macOS or Linux, run `chmod +x` on the file first. If you have Node.js 18+, you can also run it from source with `node bin/cloc-fusion.js`. Prefer the terminal? `cloc-fusion init` and `cloc-fusion scan` do the same without a browser.
 
 ## What you get
 
@@ -78,9 +76,22 @@ You can change any of this:
 - a criticality from 1 to 5 per repository, which raises its scans through `fusion.byCriticality` (by default the higher of frequency and criticality wins);
 - per-repository overrides that pin `scans`, a `model` or `loc`, or `exclude` the repository.
 
+**Which model a repository gets**, as in the Cx Credits Calculator: the model picked for that repository, else the model of its change frequency (its criticality's first when criticality decides), else the default model. So you can put the busiest repositories on one model, the most critical on another, and everything else on the default.
+
+**Tune the plan in the report.** The HTML report has the same controls in its *Choose your Fusion models* section: models and their credits, scans and model per change frequency and per criticality, the projection period, the extra % and the bundle size, plus a criticality, scans and model picker on every row of the repository table. Every figure on the page follows instantly, even with 10,000 repositories. Choices are remembered in that browser; *Download settings* saves them as `cloc-fusion-settings.json`, which the web app imports (*Import settings*) and `cloc-fusion price --config cloc-fusion-settings.json` reads.
+
 ### Connecting and signing in
 
-`cloc-fusion init` asks for the platform and sign-in method, explains where to create the token and which scopes it needs, tests it, and lists your organizations to choose from. You can pick several or `all`. Add as many connections as you need, for example github.com plus Enterprise Server plus Azure DevOps.
+**In the web app**, each connection has a *Sign in* button. A connection must be signed in before a scan can start, and the app checks every sign-in when it opens. The methods it offers depend on the platform and on what is installed:
+
+| Method | How it works |
+|---|---|
+| Sign in with GitHub | Runs `gh auth login --web`: the page shows a one-time code and opens GitHub, where you approve it (SAML SSO / Okta included). |
+| Sign in with Microsoft | Runs `az login`: the Microsoft sign-in opens in your browser (Entra ID, including Okta federation). |
+| Sign in in the browser | OAuth device flow on GitHub or GitLab, when an OAuth app id is set (`oauth.clientId`, or `CLOC_FUSION_GITHUB_CLIENT_ID` / `CLOC_FUSION_GITLAB_CLIENT_ID`). |
+| Create a token in the browser | Opens the platform's token page with the right scopes ticked where the platform allows it. Paste the token once: it is kept in `~/.cloc-fusion/credentials.json` (owner-only), never in the settings file. |
+
+**In the terminal**, `cloc-fusion init` asks for the platform and sign-in method, explains where to create the token and which scopes it needs, tests it, and lists your organizations to choose from. You can pick several or `all`. Add as many connections as you need, for example github.com plus Enterprise Server plus Azure DevOps.
 
 | Platform | Sign-in | Scopes |
 |---|---|---|
@@ -101,10 +112,11 @@ You can change any of this:
 
 | Command | What it does |
 |---|---|
+| `ui` | The web app (the default when no command is given). `--port <n>`, `--no-open` |
 | `init` | Setup wizard: connections, organizations, Fusion pricing |
 | `scan` | Discover, measure, price and write the reports |
 | `list` | Show what a scan would cover, without measuring |
-| `price` | Re-price an existing report (new rate, period or extra %) without rescanning |
+| `price` | Re-price an existing report (new rate, period, extra %, models or repository rules) without rescanning; `--config` also takes settings downloaded from a report |
 | `doctor` | Check the engine and every connection's sign-in |
 | `ai-plan` | Ask Claude for a phased onboarding plan (optional) |
 | `version` | This copy's version and build, and whether a newer release is out |
@@ -145,6 +157,7 @@ Reports are written to `cloc-fusion-output/`:
   - **Overview:** a hero with the credit total in a readiness ring, the *Discovered → Measured → Planned → Ready for Fusion* journey, and summary tiles.
   - **Detail:** Fusion cadence bars, breakdowns by organization, model and language, and a sortable, filterable repository table that pages through 10,000+ rows smoothly.
   - **Motion:** figures count up and sections ease in. It respects reduced motion and prints cleanly.
+  - **Tune the plan:** choose models, scans and pricing on the page; every figure and the CSV follow (see [How the calculation works](#how-the-calculation-works)).
   - **Download** the whole plan, or the current view, as CSV in one click.
 - **CSV**: one row per repository, safe to open in Excel (formula injection is defused).
 - **JSON**: everything, including per-language counts and settings. `price` and `--resume` read it back.
@@ -199,6 +212,7 @@ A summary; [SECURITY.md](SECURITY.md) has the threat model and every protection.
   - Never written into reports.
 - **Git is locked down:** https only (file/http only for servers you configure), clone hosts checked against the connection, URLs and branches validated, and no option injection.
 - **Hostile input is bounded:** API answers are capped at 64 MB, archives have decompression limits, archive entries are never written to disk, and report data is escaped (HTML, CSV and Markdown).
+- **The web app is local only:** it listens on 127.0.0.1, refuses any other `Host` (no DNS rebinding), requires a random per-run key on every call, and serves a strict Content Security Policy.
 - **Small attack surface:** zero runtime dependencies; scanned with Checkmarx One and regression-tested in `test/security.test.js`.
 
 ### AI onboarding plan
@@ -212,7 +226,7 @@ Claude (`claude-opus-5-5` by default) reads the report and writes `cloc-fusion-o
 ### Building from source
 
 ```
-npm test                          # 48 tests: engines, providers, reports, security, versioning
+npm test                          # 54 tests: engines, providers, reports, web app, security, versioning
 node bench/bench.js --repos 1000  # benchmarks
 node scripts/build-binary.mjs     # standalone executable for this OS → dist/
 ```

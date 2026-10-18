@@ -32,6 +32,17 @@ archives, repository contents, and report files fed back in with `--resume` or `
 | Reports and checkpoints carry no secrets: settings are written through `redactConfig`, and error messages never include URLs with credentials. | `src/config.js`, `src/scan.js` |
 | The built-in sign-in helpers (`gh auth token`, `az account get-access-token`) run without a shell. | `src/config.js` |
 
+### The web app
+| Protection | Where |
+|---|---|
+| It listens on 127.0.0.1 only, never on a network interface. | `src/ui/server.js` |
+| Every request must carry `Host: 127.0.0.1:<port>` or `localhost:<port>`, so a web page on another name that resolves to this machine (DNS rebinding) is refused. | `src/ui/server.js` |
+| Every API call needs a random key made for this run (sent as `x-cf-key`), and bodies must be JSON under 1 MB: other sites can't drive it with forms or cross-site requests, and can't read its answers. | `src/ui/server.js` |
+| The page is served with a strict Content Security Policy (no external resources, no framing, no form posts) and builds its interface without `innerHTML`. | `src/ui/server.js`, `src/ui/page.js` |
+| Tokens shown to the page are masked; saving the masked copy keeps the real one. Tokens pasted into the page or obtained by device sign-in go to `~/.cloc-fusion/credentials.json`, written atomically and owner-only, never to the settings file or reports. | `src/ui/server.js`, `src/credentials.js` |
+| Browser sign-in uses the platforms' own flows (`gh auth login --web`, `az login`, OAuth device flow), run without a shell on macOS and Linux. The app never sees a password. | `src/auth.js` |
+| The report's *Tune the plan* escapes every name typed into it, and its downloaded settings contain no tokens or connections. | `src/report/tune.js` |
+
 ### Git
 | Protection | Where |
 |---|---|
@@ -84,5 +95,7 @@ archives, repository contents, and report files fed back in with `--resume` or `
   environment variables or a command there.
 - **Azure DevOps Services clones may go to any `*.visualstudio.com` host**, which is Microsoft's
   infrastructure for organizations.
+- **Anyone who can run programs as you can use the web app** while it runs (as with any local
+  tool you are signed in to). It stops when you close it (Ctrl+C).
 - **`ai-plan` sends repository names** (or salted hashes with `--anonymize`) and figures to the
   Anthropic API. It never sends tokens or code.

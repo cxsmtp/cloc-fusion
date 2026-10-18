@@ -4,6 +4,30 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-18
+
+The web app, browser sign-in, and choosing your Fusion models.
+
+### Added
+- **The web app.** `cloc-fusion` with no command (or `cloc-fusion ui`, or a double-click on the executable) opens a local page in your browser, in the next-gen look:
+  - **Connections:** add GitHub, GitLab, Azure DevOps, Bitbucket or any Git; pick organizations from the ones found, or every one.
+  - **Fusion pricing, scan settings and repository rules**, with the same options as the configuration file.
+  - **Run the Fusion scan** with live progress, a stop button, and a credit estimate that follows every pricing change without rescanning. Reports open from the page.
+  - Starts with these defaults when there is no configuration file: models *haiku* (1.5 credits per 10K LOC) and *opus 4.7* (2.5), 20% on top, bundles of 10,000, 365 days of commits, code + markup + IaC, archived repositories included, forks and merges excluded, and a GitHub connection through the GitHub CLI.
+  - `--port` (default 4747) and `--no-open`.
+- **Browser sign-in.** Every connection must be signed in before a scan, from its *Sign in* button: GitHub through `gh auth login --web` (one-time code, SSO / Okta included), Microsoft Entra ID through `az login`, the OAuth device flow on GitHub and GitLab when an app id is set, or the platform's token page opened with the right scopes and the token pasted once. Pasted and device tokens are kept in `~/.cloc-fusion/credentials.json` (owner-only), referenced from the settings as `"token": { "saved": true }`.
+- **Choose the model per change frequency** in the app, next to the scans, as in the Cx Credits Calculator. The rules explain which model a repository gets: its own, else its frequency's (or criticality's), else the default.
+- **Tune the plan in the HTML report.** A *Choose your Fusion models* section turns the report into a calculator: models and credits, a default model, scans and model per change frequency and per criticality, period, extra % and bundle size, and a criticality, scans and model picker on every repository row. The hero, tiles, cadence, organizations, models, table and CSV all follow; tested at 10,000 repositories. Choices are remembered per report in that browser, *Reset* goes back, and *Download settings* saves `cloc-fusion-settings.json`.
+- **Import settings** in the app, and `cloc-fusion price --config <settings>`, read those downloaded settings.
+
+### Changed
+- `price` (CLI and app) applies repository rules (criticality, scans, model, lines) without a rescan.
+- The report's repository table shows the plan first: change frequency, criticality, Fusion scans, model and credits, then the measurements. The CSV gains a Criticality column.
+- `cloc-fusion` with no arguments starts the web app; `--help` shows the commands.
+
+### Security
+- The web app listens on 127.0.0.1 only, checks the `Host` header, needs a per-run key on every call, accepts JSON only, and serves a strict Content Security Policy. See [SECURITY.md](SECURITY.md#the-web-app).
+
 ## [1.2.1] - 2026-10-15
 
 ### Fixed
@@ -115,7 +139,8 @@ First release.
 - **AI onboarding plan** (`ai-plan`, optional): Claude writes a phased Fusion onboarding plan from the report; `--anonymize` hashes names first.
 - Proxy support (`HTTPS_PROXY`) and friendly errors for authentication, rate limits and sign-in pages.
 
-[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/cxsmtp/cloc-fusion/compare/e4bc001...v1.2.0
 [1.1.0]: https://github.com/cxsmtp/cloc-fusion/compare/17bd63c...e4bc001

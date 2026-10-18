@@ -7,6 +7,7 @@ import { readFile, writeFile, chmod, rename, rm } from 'node:fs/promises';
 import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { providerOf } from './providers/index.js';
+import { savedToken } from './credentials.js';
 
 const run = promisify(exec);
 const runFile = promisify(execFile);
@@ -132,10 +133,11 @@ export async function resolveCredentials(conn, env = process.env) {
   const method = provider.authMethods.find((m) => m.id === auth.method);
   let tokenRef = auth.token;
   if (!tokenRef && method?.tokenCommand) tokenRef = { command: method.tokenCommand(conn) };
-  const token = await resolveSecret(tokenRef, env);
+  // A token saved by browser sign-in or pasted once in the web app (src/credentials.js).
+  const token = tokenRef?.saved ? await savedToken(conn.name) : await resolveSecret(tokenRef, env);
   const username = typeof auth.username === 'object' ? await resolveSecret(auth.username, env) : auth.username || '';
   if (!token && auth.method && auth.method !== 'none') {
-    const where = tokenRef?.env ? `the environment variable ${tokenRef.env} is empty` : 'no token is configured';
+    const where = tokenRef?.env ? `the environment variable ${tokenRef.env} is empty` : tokenRef?.saved ? 'not signed in yet (sign in from the web app: cloc-fusion ui)' : 'no token is configured';
     throw new Error(`connection "${conn.name}": ${where}`);
   }
   return { username, token };

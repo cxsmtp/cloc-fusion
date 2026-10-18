@@ -132,19 +132,19 @@ export async function discover(cfg, { only = [], log = () => {} } = {}) {
 }
 
 /** Measure every repository and price Fusion for them. Returns the report object. */
-export async function scan(cfg, { only = [], limit = 0, resume = null, workDir = null, keep = false, outDir = null, log = () => {}, progress = () => {} } = {}) {
+export async function scan(cfg, { only = [], limit = 0, resume = null, workDir = null, keep = false, outDir = null, log = () => {}, progress = () => {}, signal = null } = {}) {
   const started = Date.now();
   // A private, random work folder per run (never a predictable shared path in /tmp).
   const ownWorkDir = !workDir;
   if (ownWorkDir) workDir = await mkdtemp(join(tmpdir(), 'cloc-fusion-'));
   try {
-    return await runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, progress, started });
+    return await runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, progress, started, signal });
   } finally {
     if (ownWorkDir && !keep) await rm(workDir, { recursive: true, force: true, maxRetries: 3 }).catch(() => {});
   }
 }
 
-async function runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, progress, started }) {
+async function runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, progress, started, signal }) {
   const engine = await chooseEngine(cfg.engine);
   log(`Engine: ${engine === 'git' ? 'git (shallow, blob-less clones)' : 'platform APIs (no git needed)'}`);
   const { repos, problems, sessions } = await discover(cfg, { only, log });
@@ -156,6 +156,8 @@ async function runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, p
   let lastCheckpoint = Date.now();
   progress({ done, total: todo.length });
   await pool(todo, cfg.concurrency || 4, async (repo) => {
+    // Stopped: repositories not started yet are left unmeasured; the report says so (partial).
+    if (signal?.aborted) return;
     const prior = previous.get(keyOf(repo));
     if (prior) {
       results.set(keyOf(repo), { ...repo, ...pick(prior) });
@@ -197,7 +199,7 @@ async function runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, p
       await checkpoint(outDir, cfg, repos, results, problems).catch(() => {});
     }
   });
-  const report = buildReport(cfg, repos.map((r) => results.get(keyOf(r)) || r), problems, { started });
+  const report = buildReport(cfg, repos.map((r) => results.get(keyOf(r)) || r), problems, { started, partial: Boolean(signal?.aborted) });
   return report;
 }
 
@@ -271,5 +273,14 @@ export function buildReport(cfg, repos, problems = [], { started = Date.now(), p
 
 /** Re-price an existing report with (new) settings, without measuring again. */
 export function reprice(report, cfg) {
-  return buildReport({ ...report.settings, ...cfg, fusion: cfg.fusion ?? report.settings.fusion, totals: cfg.totals ?? report.settings.totals }, report.repos, report.problems || []);
+  let repos = report.repos;
+  // New repository rules (criticality, scans, model, lines) apply without a rescan; skipping needs one.
+  if (cfg.overrides) {
+    const match = overrideMatcher(cfg);
+    repos = repos.map((r) => {
+      const o = match(r);
+      return { ...r, criticality: o.criticality ?? null, scansOverride: o.scans ?? null, modelOverride: o.model ?? null, locOverride: o.loc ?? null };
+    });
+  }
+  return buildReport({ ...report.settings, ...cfg, fusion: cfg.fusion ?? report.settings.fusion, totals: cfg.totals ?? report.settings.totals, overrides: cfg.overrides ?? report.settings.overrides }, repos, report.problems || []);
 }

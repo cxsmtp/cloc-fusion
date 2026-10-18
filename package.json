@@ -1,6 +1,6 @@
 {
   "name": "cloc-fusion",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Count lines of code and commit activity across every repository of your GitHub, GitLab, Azure DevOps and Bitbucket organizations, suggest Checkmarx One Fusion scan frequency, and work out the credits needed.",
   "type": "module",
   "bin": {
@@ -17,7 +17,7 @@
     "node": ">=18.17"
   },
   "scripts": {
-    "test": "node --test test/fusion.test.js test/loc.test.js test/providers.test.js test/scan.test.js test/apiengine.test.js test/security.test.js test/version.test.js",
+    "test": "node --test test/fusion.test.js test/loc.test.js test/providers.test.js test/scan.test.js test/apiengine.test.js test/security.test.js test/version.test.js test/ui.test.js",
     "bench": "node bench/bench.js",
     "build": "node scripts/build-binary.mjs",
     "start": "node bin/cloc-fusion.js"

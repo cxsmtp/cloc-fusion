@@ -5,11 +5,12 @@
 import { num, esc, modelName } from './format.js';
 import { NEXTGEN_CSS } from './theme.js';
 import { VERSION } from '../version.js';
+import { TUNE_CSS, tuneBase, tuneSection, tuner } from './tune.js';
 
 /** A figure that counts up when shown (the final value is in the markup, so it reads without script). */
 const count = (value, digits = 0) => (Number.isFinite(Number(value)) ? `<span class="count" data-to="${Number(value)}" data-digits="${digits}">${num(value, digits)}</span>` : '—');
 
-const tile = (label, value, note = '', icon = '') => `<div class="tile reveal">${icon ? `<div class="tile-icon" aria-hidden="true">${icon}</div>` : ''}<div class="tile-label">${esc(label)}</div><div class="tile-value">${value}</div>${note ? `<div class="tile-note">${note}</div>` : ''}</div>`;
+const tile = (label, value, note = '', icon = '', id = '') => `<div class="tile reveal"${id ? ` id="${id}"` : ''}>${icon ? `<div class="tile-icon" aria-hidden="true">${icon}</div>` : ''}<div class="tile-label">${esc(label)}</div><div class="tile-value">${value}</div>${note ? `<div class="tile-note">${note}</div>` : ''}</div>`;
 
 const ICONS = {
   repo: '<svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h12"/></svg>',
@@ -76,6 +77,10 @@ export function toHtml(report) {
     fq: r.frequencyLabel || '',
     fr: r.frequency || '',
     cr: r.criticality ?? null,
+    so: r.scansOverride ?? null,
+    mo: r.modelOverride ?? null,
+    mi: r.included ? r.model ?? null : null,
+    inc: r.included && r.units > 0 ? 1 : 0,
     sc: r.included ? r.scans : null,
     un: r.included ? r.units : null,
     md: r.included ? modelName(report, r.model) : '',
@@ -99,7 +104,7 @@ export function toHtml(report) {
     ['Planned', `${num(t.scans)} Fusion scans`, t.scans > 0],
     ['Ready for Fusion', priced ? `${num(c.total, digits(c.total))} credits` : 'awaiting pricing', priced && t.scans > 0],
   ]
-    .map(([title, sub, done], i) => `<li class="step${done ? ' done' : ''}" style="--i:${i}"><span class="step-dot" aria-hidden="true">${ICONS.check}</span><span class="step-title">${esc(title)}</span><span class="step-sub">${esc(sub)}</span></li>`)
+    .map(([title, sub, done], i) => `<li class="step${done ? ' done' : ''}" style="--i:${i}"><span class="step-dot" aria-hidden="true">${ICONS.check}</span><span class="step-title">${esc(title)}</span><span class="step-sub"${i === 3 ? ' id="step-ready"' : ''}>${esc(sub)}</span></li>`)
     .join('');
   const version = esc(report.version || VERSION);
 
@@ -114,6 +119,7 @@ export function toHtml(report) {
 <script>try{var d=document.documentElement,t=localStorage.getItem('cf-theme'),a=localStorage.getItem('cf-accent');if(t==='auto')d.removeAttribute('data-theme');else if(t==='light')d.setAttribute('data-theme','light');if(/^(indigo|cyan|emerald|violet|amber)$/.test(a||''))d.setAttribute('data-accent',a)}catch(e){}</script>
 <style>
 ${NEXTGEN_CSS}
+${TUNE_CSS}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;min-height:100vh;color:var(--text);font:14.5px/1.55 var(--font);font-feature-settings:"kern","liga","ss01";-webkit-font-smoothing:antialiased;background-color:var(--bg);
@@ -260,6 +266,7 @@ input[type=search]{flex:1;min-width:220px;padding-left:36px;background-image:url
 #repos tbody tr{animation:rowin .4s var(--ease) both}
 @keyframes rowin{from{opacity:0;transform:translateY(4px)}}
 .spark{display:block}
+#repos td.cd{color:var(--accent);font-weight:600}
 .more{display:flex;justify-content:center;gap:10px;margin-top:14px}
 .more button[hidden]{display:none}
 .problems td{white-space:normal}
@@ -313,9 +320,9 @@ footer{margin-top:28px;color:var(--muted);font-size:12px;display:flex;gap:10px;f
 <div class="ring" style="--p:${readyPct}">
 <svg viewBox="0 0 36 36" aria-hidden="true"><defs><linearGradient id="ringGrad" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="var(--ng-from)"/><stop offset="1" stop-color="var(--ng-to)"/></linearGradient></defs>
 <circle class="track" cx="18" cy="18" r="15.9155" fill="none" stroke-width="2.2"/><circle class="val" cx="18" cy="18" r="15.9155" fill="none" stroke-width="2.2" pathLength="100"/></svg>
-<div class="ring-in">${heroFigure}</div>
+<div class="ring-in" id="hero-figure">${heroFigure}</div>
 </div>
-<div class="hero-pills">${heroPills}</div>
+<div class="hero-pills" id="hero-pills">${heroPills}</div>
 <div class="ready-label">${readyPct}% of repositories measured${k.failed ? ` · ${num(k.failed)} to retry` : ''}</div>
 </div>
 </section>
@@ -326,9 +333,11 @@ footer{margin-top:28px;color:var(--muted);font-size:12px;display:flex;gap:10px;f
 ${tile('Repositories', count(k.measured), `${num(k.discovered)} found · ${num(k.skipped)} skipped${k.failed ? ` · <span class="bad">${num(k.failed)} failed</span>` : ''}`, ICONS.repo)}
 ${tile('Lines of code', count(t.lines), `${num(t.units)} × 10K units, each repository rounded up`, ICONS.code)}
 ${tile('Commits in window', count(t.commits), `${num(weekly, 1)} a week across the estate`, ICONS.pulse)}
-${tile('Fusion scans', count(t.scans), `${num(t.unitScans)} 10K-unit scans over ${num(f.periodMonths)} months`, ICONS.scan)}
-${tile('Fusion credits', priced ? count(c.total, digits(c.total)) : '—', priced ? `${num(c.bundles)} bundle${c.bundles === 1 ? '' : 's'} of ${num(c.settings.bundleCredits)}` : '<span class="warn">Set credits per 10K LOC</span>', ICONS.spark)}
+${tile('Fusion scans', count(t.scans), `${num(t.unitScans)} 10K-unit scans over ${num(f.periodMonths)} months`, ICONS.scan, 'tile-scans')}
+${tile('Fusion credits', priced ? count(c.total, digits(c.total)) : '—', priced ? `${num(c.bundles)} bundle${c.bundles === 1 ? '' : 's'} of ${num(c.settings.bundleCredits)}` : '<span class="warn">Set credits per 10K LOC</span>', ICONS.spark, 'tile-credits')}
 </section>
+
+${tuneSection(ICONS)}
 
 <h2 class="reveal">Fusion cadence <span class="n-chip">by change frequency</span></h2>
 <p class="lede reveal">Every commit to the default branch runs a pipeline, so commit frequency sets the scan frequency. More than 5 commits a week means one Fusion scan a week, 1 to 5 means one every 2 weeks, and so on: the same rules as the Cx Credits Calculator. Credits = 10K units × Fusion scans × the model's credits per 10K LOC.</p>
@@ -337,10 +346,10 @@ ${tile('Fusion credits', priced ? count(c.total, digits(c.total)) : '—', price
 <div class="grid2">
 <div><h2 class="reveal">Organizations</h2><div class="glass table-wrap reveal"><table>
 <thead><tr><th>Connection</th><th>Organization</th><th class="n">Repos</th><th class="n">Measured</th><th class="n">LOC</th><th class="n">Commits</th><th class="n">Scans</th><th class="n">Credits</th></tr></thead>
-<tbody>${orgRows || '<tr><td colspan="8">None</td></tr>'}</tbody></table></div>
+<tbody id="org-body">${orgRows || '<tr><td colspan="8">None</td></tr>'}</tbody></table></div>
 <h2 class="reveal">Fusion models</h2><div class="glass table-wrap reveal"><table>
 <thead><tr><th>Model</th><th class="n">Credits / 10K LOC</th><th class="n">Repos</th><th class="n">10K-unit scans</th><th class="n">Credits</th></tr></thead>
-<tbody>${modelRows || '<tr><td colspan="5"><span class="warn">No Fusion model yet: add one with its credits per 10K LOC (cloc-fusion price --credits-per-10k N).</span></td></tr>'}</tbody></table></div></div>
+<tbody id="model-body">${modelRows || '<tr><td colspan="5"><span class="warn">No Fusion model yet: add one with its credits per 10K LOC (cloc-fusion price --credits-per-10k N).</span></td></tr>'}</tbody></table></div></div>
 <div><h2 class="reveal">Languages <span class="n-chip">${num(langs.length)}</span></h2><div class="glass panel reveal" id="langs">${langRows || '<div class="lang">None</div>'}</div></div>
 </div>
 
@@ -354,7 +363,7 @@ ${tile('Fusion credits', priced ? count(c.total, digits(c.total)) : '—', price
 </div>
 <div class="glass table-wrap reveal" style="max-height:78vh"><table id="repos">
 <thead><tr>
-<th data-k="n">Repository</th><th data-k="o">Organization</th><th data-k="lg">Language</th><th class="n" data-k="loc">LOC</th><th class="n" data-k="cm">Commits</th><th class="n" data-k="cw">Per week</th><th data-k="w">Last 52 weeks</th><th class="n" data-k="au">Authors</th><th data-k="lc">Last commit</th><th data-k="fr">Change frequency</th><th class="n" data-k="sc">Fusion scans</th><th class="n" data-k="un">10K units</th><th data-k="md">Model</th><th class="n" data-k="cd">Credits</th><th data-k="st">Status</th>
+<th data-k="n">Repository</th><th data-k="o">Organization</th><th data-k="fr">Change frequency</th><th class="n" data-k="cr">Criticality</th><th class="n" data-k="sc">Fusion scans</th><th data-k="md">Model</th><th class="n" data-k="cd">Credits</th><th class="n" data-k="loc">LOC</th><th class="n" data-k="un">10K units</th><th class="n" data-k="cm">Commits</th><th class="n" data-k="cw">Per week</th><th data-k="w">Last 52 weeks</th><th class="n" data-k="au">Authors</th><th data-k="lc">Last commit</th><th data-k="lg">Language</th><th data-k="st">Status</th>
 </tr></thead><tbody></tbody></table></div>
 <div class="more"><button type="button" id="more" hidden>Show more</button><button type="button" id="all" hidden>Show all</button></div>
 
@@ -373,6 +382,7 @@ ${report.problems?.length ? `<h2 class="reveal">Needs attention <span class="n-c
 var W=typeof window!=='undefined'?window:{},D=document,root=D.documentElement||{dataset:{},setAttribute:function(){},removeAttribute:function(){}};
 var rows=JSON.parse(D.getElementById('data').textContent);
 var FQ=${JSON.stringify(report.byFrequency.map((b) => b.id))};
+var BASE=${JSON.stringify(tuneBase(report)).replace(/</g, '\\u003c')},T=null;
 var still=!!(W.matchMedia&&W.matchMedia('(prefers-reduced-motion: reduce)').matches);
 var raf=W.requestAnimationFrame?W.requestAnimationFrame.bind(W):function(f){return setTimeout(function(){f(Date.now())},16)};
 var store={get:function(k){try{return W.localStorage.getItem(k)}catch(e){return null}},set:function(k,v){try{W.localStorage.setItem(k,v)}catch(e){}}};
@@ -411,7 +421,7 @@ var shown=view.slice(0,limit);more.hidden=every.hidden=shown.length>=view.length
 tbody.innerHTML=shown.map(function(r,i){
 var name=r.u&&/^https?:/i.test(r.u)?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
 var status=r.st==='ok'?'<span class="status ok">measured</span>':r.st==='failed'?'<span class="status bad" title="'+esc(r.er)+'">failed</span>':'<span class="status warn">'+esc(r.st)+'</span>';
-return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.lg)+'</td><td class="n">'+fmt(r.loc)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.fq)+'</td><td class="n">'+fmt(r.sc)+'</td><td class="n">'+fmt(r.un)+'</td><td>'+esc(r.md)+'</td><td class="n">'+fmt(r.cd,1)+'</td><td>'+status+'</td></tr>'}).join('');
+return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.fq)+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.crit(r):fmt(r.cr))+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.scans(r):fmt(r.sc))+'</td><td'+(T?' class="pick"':'')+'>'+(T?T.model(r):esc(r.md))+'</td><td class="n cd">'+fmt(r.cd,1)+'</td><td class="n">'+fmt(r.loc)+'</td><td class="n">'+fmt(r.un)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.lg)+'</td><td>'+status+'</td></tr>'}).join('');
 all$('#repos th').forEach(function(th){th.setAttribute('aria-sort',th.getAttribute('data-k')===sortKey?(dir>0?'ascending':'descending'):'none')});
 }
 all$('#repos th').forEach(function(th){th.addEventListener('click',function(){var k=th.getAttribute('data-k');if(k===sortKey)dir=-dir;else{sortKey=k;dir=['n','o','lg','md','st','fr','lc'].indexOf(k)>=0?1:-1}render()})});
@@ -420,8 +430,8 @@ more.addEventListener('click',function(){limit+=PAGE;render()});every.addEventLi
 
 /* Downloads: the plan as CSV, all of it or this view (spreadsheet formulas defused) */
 function cell(v){if(v===null||v===undefined)return'';var s=String(v);if(/^[=+\\-@\\t\\r]/.test(s)&&!/^-?\\d+(\\.\\d+)?$/.test(s))s="'"+s;return /[",\\n\\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
-function csv(list,name){var head=['Repository','Organization','Connection','Language','Lines of code','Commits','Commits per week','Authors','Last commit','Change frequency','Fusion scans','10K units','Model','Credits','Status'];
-var lines=[head.join(',')].concat(list.map(function(r){return[r.n,r.o,r.c,r.lg,r.loc,r.cm,r.cw,r.au,r.lc,r.fq,r.sc,r.un,r.md,r.cd,r.st].map(cell).join(',')}));
+function csv(list,name){var head=['Repository','Organization','Connection','Language','Lines of code','Commits','Commits per week','Authors','Last commit','Change frequency','Criticality','Fusion scans','10K units','Model','Credits','Status'];
+var lines=[head.join(',')].concat(list.map(function(r){return[r.n,r.o,r.c,r.lg,r.loc,r.cm,r.cw,r.au,r.lc,r.fq,r.cr,r.sc,r.un,r.md,r.cd,r.st].map(cell).join(',')}));
 if(typeof Blob==='undefined'||!W.URL)return;var url=W.URL.createObjectURL(new Blob(['\\ufeff'+lines.join('\\r\\n')],{type:'text/csv'}));var a=D.createElement('a');a.href=url;a.download=name;D.body.appendChild(a);a.click();a.remove();setTimeout(function(){W.URL.revokeObjectURL(url)},1000)}
 function plan(){return rows.slice().sort(function(a,b){return(b.cd||0)-(a.cd||0)||cmp(a.n,b.n)})}
 function on(id,f){var el=D.getElementById(id);if(el)el.addEventListener('click',f)}
@@ -429,6 +439,8 @@ on('csv',function(){csv(view,'fusion-plan-view.csv')});
 on('csv-all',function(){csv(plan(),'fusion-plan.csv')});on('csv-plan',function(){csv(plan(),'fusion-plan.csv')});
 on('to-repos',function(){var t=D.getElementById('repositories');if(t&&t.scrollIntoView)t.scrollIntoView({behavior:still?'auto':'smooth'})});
 on('print',function(){if(W.print)W.print()});
+/* Tune the plan: models, scans and pricing chosen on the page (src/report/tune.js) */
+try{T=(${tuner.toString()})({rows:rows,base:BASE,D:D,W:W,store:store,fmt:fmt,esc:esc,tbody:tbody,render:function(){render()}})}catch(e){T=null}
 render();
 })();
 </script>
