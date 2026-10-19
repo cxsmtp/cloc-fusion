@@ -2,7 +2,6 @@
 // public/look.js): Obsidian (dark) and Daylight (light), glass panels over an ambient glow, the
 // accent's indigo → cyan gradient, Plus Jakarta Sans and JetBrains Mono. Same tokens, same accents,
 // so a cloc-fusion report sits next to the app's own reports as one family.
-import { FONT_FACES } from './fonts.js';
 
 /** For each accent: text colour on light, on dark, then the gradient's two ends (look.js). */
 export const NEXTGEN_ACCENTS = {
@@ -13,7 +12,6 @@ export const NEXTGEN_ACCENTS = {
   amber: ['#b45309', '#fcd34d', '#f59e0b', '#f43f5e'],
 };
 
-const fontFaces = FONT_FACES.map((f) => `@font-face{font-family:"${f.family}";font-style:normal;font-weight:${f.weight};font-display:swap;src:url(data:font/woff2;base64,${f.data}) format("woff2")}`).join('\n');
 
 const accentRules = Object.entries(NEXTGEN_ACCENTS)
   .filter(([name]) => name !== 'indigo')
@@ -27,8 +25,8 @@ function hexA(hex, a) {
 
 const DARK = `color-scheme:dark;--bg:#06080f;--surface:#0e1422;--surface-2:#121a2b;--surface-3:#1a2335;--border:#1d2638;--border-strong:#2a3449;--text:#e2e8f0;--muted:#94a3b8;--accent:var(--ng-ink-dark);--accent-soft:color-mix(in srgb,var(--ng-from) 16%,transparent);--danger:#fb7185;--ok:#34d399;--warn:#fbbf24;--shadow:0 8px 30px rgb(0 0 0/.35);--shadow-pop:0 0 0 1px rgb(255 255 255/.08),0 20px 48px -12px rgb(0 0 0/.7);--ng-glass:rgb(13 18 30/.72);--ng-glass-line:rgb(255 255 255/.07);--ng-ambient-1:rgb(79 70 229/.16);--ng-ambient-2:rgb(8 145 178/.13);--ng-ambient-3:rgb(5 150 105/.09);--ng-head:#7c8aa5;--ng-wordmark:linear-gradient(90deg,#fff,#cbd5e1 60%,#94a3b8)`;
 
-export const NEXTGEN_CSS = `${fontFaces}
-:root{--ng-ink-light:#4f46e5;--ng-ink-dark:#a5b4fc;--ng-from:#6366f1;--ng-to:#06b6d4;--ng-glow:rgb(99 102 241/.35);
+/** The theme without its embedded fonts (the branded page and report use the system font). */
+export const THEME_CSS = `:root{--ng-ink-light:#4f46e5;--ng-ink-dark:#a5b4fc;--ng-from:#6366f1;--ng-to:#06b6d4;--ng-glow:rgb(99 102 241/.35);
 --ng-solid:linear-gradient(135deg,var(--ng-ink-light),color-mix(in srgb,var(--ng-to) 60%,#0b1020));
 color-scheme:light;--bg:#f3f5fb;--surface:#fff;--surface-2:#f6f7fc;--surface-3:#eceff7;--border:#e2e6f0;--border-strong:#cbd2e1;--text:#0b1020;--muted:#5a6478;--accent:var(--ng-ink-light);--accent-soft:color-mix(in srgb,var(--ng-from) 9%,transparent);--danger:#e11d48;--ok:#059669;--warn:#b45309;
 --shadow:0 1px 2px rgb(15 23 42/.04),0 8px 24px -16px rgb(15 23 42/.18);--shadow-pop:0 0 0 1px rgb(15 23 42/.06),0 18px 40px -16px rgb(15 23 42/.28);

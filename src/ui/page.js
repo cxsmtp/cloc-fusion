@@ -1,7 +1,7 @@
 // The web app's single page, in the next-gen look (src/report/theme.js). The client code below is
 // a real function, serialized into the page, so it is written and linted as ordinary JavaScript.
 // Every piece of text it shows goes through DOM text nodes (no HTML strings from data).
-import { NEXTGEN_CSS } from '../report/theme.js';
+import { NEXTGEN_CSS } from '../report/theme-fonts.js';
 
 export const UI_CSS = `
 *{box-sizing:border-box}

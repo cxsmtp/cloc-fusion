@@ -25,7 +25,7 @@ The web app, the standalone HTML page, browser sign-in, and choosing your Fusion
 - **Import settings** in the app, and `cloc-fusion price --config <settings>`, read those downloaded settings.
 
 ### Changed
-- **Checkmarx branding on the standalone page and the HTML report:** the Checkmarx logo replaces the cloc·fusion wordmark; Founders Grotesk is the typeface, built into the file (Regular, Medium, Semibold, Bold as Latin WOFF2, about 20 KB each); a calm, solid look with one brand colour and no gradients, glows or animated backgrounds; labels and figures in the brand typeface with aligned numbers.
+- **Checkmarx branding on the standalone page and the HTML report:** the Checkmarx logo replaces the cloc·fusion wordmark; the operating system's own typeface (San Francisco on macOS, Segoe UI on Windows), with no embedded fonts, so the page is about 175 KB; a calm, solid look with one brand colour and no gradients, glows or animated backgrounds; labels and figures in the same typeface, with aligned digits in tables and figures.
 - The engine's shared parts (report builder, repository discovery rules, tar parser, commit statistics, token pages) are plain JavaScript modules, used by the CLI, the app and the standalone page alike. Line counting is faster (about 155 MB/s per core, from 110).
 - `price` (CLI and app) applies repository rules (criticality, scans, model, lines) without a rescan.
 - The report's repository table shows the plan first: change frequency, criticality, Fusion scans, model and credits, then the measurements. The CSV gains a Criticality column.

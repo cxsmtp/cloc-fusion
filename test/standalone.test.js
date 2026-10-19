@@ -127,7 +127,7 @@ test('cloc-fusion.html is built from this version and its script parses', () => 
   assert.ok(!/https?:\/\/(?!127\.0\.0\.1)[^"' )]*\.(js|css)["' )]/.test(html.replace(/<script>[\s\S]*<\/script>/, '')), 'no external scripts or styles');
 });
 
-test('the page and the report carry the Checkmarx logo and brand typeface', async () => {
+test('the page and the report carry the Checkmarx logo and use the system font', async () => {
   const { toHtml } = await import('../src/report/html.js');
   const { buildReport } = await import('../src/report/build.js');
   const { normalizeConfig } = await import('../src/config.js');
@@ -135,7 +135,8 @@ test('the page and the report carry the Checkmarx logo and brand typeface', asyn
   const page = readFileSync(new URL('../cloc-fusion.html', import.meta.url), 'utf8');
   for (const html of [report, page]) {
     assert.match(html, /<svg class="cx-logo"[^>]*aria-label="Checkmarx"/);
-    assert.match(html, /font-family:"Founders Grotesk"/);
+    assert.match(html, /--font:-apple-system,BlinkMacSystemFont/);
+    assert.ok(!/@font-face/.test(html), 'no embedded fonts');
     assert.ok(!html.includes('cloc·<b>fusion</b>'));
   }
 });

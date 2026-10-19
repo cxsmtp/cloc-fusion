@@ -3,7 +3,7 @@
 // bundled by esbuild (a build-time tool only; the page needs nothing). Run: node scripts/build-standalone.mjs
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
-import { NEXTGEN_CSS } from '../src/report/theme.js';
+import { THEME_CSS } from '../src/report/theme.js';
 import { UI_CSS } from '../src/ui/page.js';
 import { VERSION } from '../src/version.js';
 import { BRAND_CSS, BRAND_MARK } from '../src/report/brand.js';
@@ -28,7 +28,7 @@ const page = `<!doctype html>
 <meta name="color-scheme" content="dark light">
 <meta name="generator" content="cloc-fusion ${VERSION}">
 <title>Checkmarx Fusion Planner</title>
-<style>${NEXTGEN_CSS}${UI_CSS}${BRAND_CSS}
+<style>${THEME_CSS}${UI_CSS}${BRAND_CSS}
 .note{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 14px;border-radius:14px;font-size:12.5px;color:var(--muted);border:1px solid var(--ng-glass-line);background:color-mix(in srgb,var(--surface-2) 70%,transparent)}
 .note b{color:var(--text)}
 </style>

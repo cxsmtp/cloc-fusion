@@ -3,7 +3,7 @@
 // breakdowns, and a sortable, searchable repository table. No external resources: it opens
 // anywhere, offline, and renders the same everywhere (fonts embedded).
 import { num, esc, modelName } from './format.js';
-import { NEXTGEN_CSS } from './theme.js';
+import { THEME_CSS } from './theme.js';
 import { VERSION } from '../version.js';
 import { TUNE_CSS, tuneBase, tuneSection, tuner } from './tune.js';
 import { BRAND_CSS, BRAND_MARK } from './brand.js';
@@ -120,7 +120,7 @@ export function toHtml(report) {
 <title>Fusion Readiness Report</title>
 <script>try{var d=document.documentElement,t=localStorage.getItem('cf-theme'),a=localStorage.getItem('cf-accent');if(t==='auto')d.removeAttribute('data-theme');else if(t==='light')d.setAttribute('data-theme','light');if(/^(indigo|cyan|emerald|violet|amber)$/.test(a||''))d.setAttribute('data-accent',a)}catch(e){}</script>
 <style>
-${NEXTGEN_CSS}
+${THEME_CSS}
 ${TUNE_CSS}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
