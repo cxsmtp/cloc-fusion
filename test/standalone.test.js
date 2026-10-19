@@ -126,3 +126,16 @@ test('cloc-fusion.html is built from this version and its script parses', () => 
   assert.doesNotThrow(() => new Function(scripts[0][1]));
   assert.ok(!/https?:\/\/(?!127\.0\.0\.1)[^"' )]*\.(js|css)["' )]/.test(html.replace(/<script>[\s\S]*<\/script>/, '')), 'no external scripts or styles');
 });
+
+test('the page and the report carry the Checkmarx logo and brand typeface', async () => {
+  const { toHtml } = await import('../src/report/html.js');
+  const { buildReport } = await import('../src/report/build.js');
+  const { normalizeConfig } = await import('../src/config.js');
+  const report = toHtml(buildReport(normalizeConfig({}), []));
+  const page = readFileSync(new URL('../cloc-fusion.html', import.meta.url), 'utf8');
+  for (const html of [report, page]) {
+    assert.match(html, /<svg class="cx-logo"[^>]*aria-label="Checkmarx"/);
+    assert.match(html, /font-family:"Founders Grotesk"/);
+    assert.ok(!html.includes('cloc·<b>fusion</b>'));
+  }
+});

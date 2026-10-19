@@ -75,6 +75,8 @@ The report also shows totals and the number of credit bundles you need. It break
 
 Results are the full report: open it from the page, or download it as HTML, CSV or JSON. Settings files move freely between the page, the app and the CLI.
 
+**Branding:** the page and the HTML report carry the Checkmarx logo and use Founders Grotesk. The font is a licensed typeface and is not in the repository: it shows where it is installed, and to build it in, put the web font files in `assets/fonts/founders-grotesk/` and run `node scripts/embed-brand-font.mjs` (see the README there).
+
 Rebuild it after changing the code with `node scripts/build-standalone.mjs` (esbuild at build time only; the page itself has no dependencies). Releases rebuild and attach it with its SHA-256.
 
 ### How the calculation works
@@ -251,7 +253,7 @@ Claude (`claude-opus-5-5` by default) reads the report and writes `cloc-fusion-o
 ### Building from source
 
 ```
-npm test                          # 59 tests: engines, providers, reports, web app, standalone page, security, versioning
+npm test                          # 60 tests: engines, providers, reports, web app, standalone page, security, versioning
 node bench/bench.js --repos 1000  # benchmarks
 node scripts/build-binary.mjs     # standalone executable for this OS → dist/
 ```

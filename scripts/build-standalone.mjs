@@ -6,6 +6,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import { NEXTGEN_CSS } from '../src/report/theme.js';
 import { UI_CSS } from '../src/ui/page.js';
 import { VERSION } from '../src/version.js';
+import { BRAND_CSS, BRAND_MARK } from '../src/report/brand.js';
 
 const root = new URL('..', import.meta.url).pathname;
 const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
@@ -26,8 +27,8 @@ const page = `<!doctype html>
 <meta http-equiv="Content-Security-Policy" content="${CSP}">
 <meta name="color-scheme" content="dark light">
 <meta name="generator" content="cloc-fusion ${VERSION}">
-<title>cloc-fusion</title>
-<style>${NEXTGEN_CSS}${UI_CSS}
+<title>Checkmarx Fusion Planner</title>
+<style>${NEXTGEN_CSS}${UI_CSS}${BRAND_CSS}
 .note{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding:12px 14px;border-radius:14px;font-size:12.5px;color:var(--muted);border:1px solid var(--ng-glass-line);background:color-mix(in srgb,var(--surface-2) 70%,transparent)}
 .note b{color:var(--text)}
 </style>
@@ -35,7 +36,7 @@ const page = `<!doctype html>
 <body>
 <div class="aurora" aria-hidden="true"><i></i><i></i></div>
 <header class="topbar"><div class="topbar-in">
-<div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 12-4.9M19 12a7 7 0 0 1-12 4.9"/><path d="M17 3v4.5h-4.5M7 21v-4.5h4.5"/></svg></span><span class="brand-name">cloc·<b>fusion</b></span></div>
+<div class="brand">${BRAND_MARK}</div>
 <span class="chip" id="version"></span>
 <span class="chip path">one file · nothing to install</span>
 <span class="spacer"></span>
@@ -50,7 +51,7 @@ const page = `<!doctype html>
 <div class="eyebrow">Fusion planner · runs in this browser</div>
 <h1>Size every repository for <span class="grad">Fusion</span>, from one file</h1>
 <p>Sign in to your Git platforms, check the pricing, and run the scan. Every repository is counted and priced right here, in this page: nothing to install, nothing hosted, and nothing leaves your computer except the calls to your own Git platforms.</p>
-<div class="note"><span>🔒</span><span><b>Tokens stay in this page's memory</b> and are gone when you close it. Settings (never tokens) are remembered in this browser. GitHub may not allow archive downloads from a page opened from disk; its lines of code are then estimated from GitHub's language statistics and marked as such. For exact counts there, use the cloc-fusion app.</span></div>
+<div class="note"><span><b>Tokens stay in this page's memory</b> and are gone when you close it. Settings (never tokens) are remembered in this browser. GitHub may not allow archive downloads from a page opened from disk; its lines of code are then estimated from GitHub's language statistics and marked as such. For exact counts there, use the cloc-fusion app.</span></div>
 </section>
 <section class="glass card"><div class="card-h"><span class="step">1</span><h2>Connections</h2></div><p class="lede">Sign in to every connection with a token before the scan. <b>Create a token</b> opens the platform's page with the right permissions ticked where it can.</p><div id="connections"></div></section>
 <section class="glass card"><div class="card-h"><span class="step">2</span><h2>Fusion pricing</h2></div><p class="lede">Credits = 10K units of code × Fusion scans × the model's credits per 10K LOC. After a scan, the estimate follows every change.</p><div id="pricing"></div></section>

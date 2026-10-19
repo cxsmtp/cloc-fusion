@@ -6,6 +6,7 @@ import { num, esc, modelName } from './format.js';
 import { NEXTGEN_CSS } from './theme.js';
 import { VERSION } from '../version.js';
 import { TUNE_CSS, tuneBase, tuneSection, tuner } from './tune.js';
+import { BRAND_CSS, BRAND_MARK } from './brand.js';
 
 /** A figure that counts up when shown (the final value is in the markup, so it reads without script). */
 const count = (value, digits = 0) => (Number.isFinite(Number(value)) ? `<span class="count" data-to="${Number(value)}" data-digits="${digits}">${num(value, digits)}</span>` : '—');
@@ -121,6 +122,7 @@ export function toHtml(report) {
 <style>
 ${NEXTGEN_CSS}
 ${TUNE_CSS}
+${BRAND_CSS}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;min-height:100vh;color:var(--text);font:14.5px/1.55 var(--font);font-feature-settings:"kern","liga","ss01";-webkit-font-smoothing:antialiased;background-color:var(--bg);
@@ -286,7 +288,7 @@ footer{margin-top:28px;color:var(--muted);font-size:12px;display:flex;gap:10px;f
 <body class="pre">
 <div class="aurora" aria-hidden="true"><i></i><i></i><i></i></div>
 <header class="topbar"><div class="topbar-in">
-<a class="brand" href="#top" aria-label="cloc-fusion"><span class="brand-mark"><svg viewBox="0 0 24 24"><path d="M5 12a7 7 0 0 1 12-4.9M19 12a7 7 0 0 1-12 4.9"/><path d="M17 3v4.5h-4.5M7 21v-4.5h4.5"/></svg></span><span class="brand-name">cloc·<b>fusion</b></span></a>
+<a class="brand" href="#top" aria-label="Checkmarx">${BRAND_MARK}</a>
 <span class="chip" title="cloc-fusion version">v${version}</span>
 <span class="chip when">${esc(generated.toISOString().slice(0, 16).replace('T', ' '))} UTC</span>
 <span class="spacer"></span>
