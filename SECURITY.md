@@ -43,6 +43,15 @@ archives, repository contents, and report files fed back in with `--resume` or `
 | Browser sign-in uses the platforms' own flows (`gh auth login --web`, `az login`, OAuth device flow), run without a shell on macOS and Linux. The app never sees a password. | `src/auth.js` |
 | The report's *Tune the plan* escapes every name typed into it, and its downloaded settings contain no tokens or connections. | `src/report/tune.js` |
 
+### The standalone page (cloc-fusion.html)
+| Protection | Where |
+|---|---|
+| Tokens live only in the page's memory: never written to browser storage (which pages opened from disk can share), never in exported settings or reports. Closing the page forgets them. | `src/browser/app.js` |
+| A Content Security Policy allows no external scripts, styles, frames or form posts; the page talks only to the platform APIs you configure. | `scripts/build-standalone.mjs` |
+| The same credential rules as the app: the token goes only to the connection's API origin. Archive downloads carry only `Authorization`, which the browser drops when GitHub redirects to its download host. | `src/http.js` |
+| Archives are read in memory with size and decompression limits (1 GB by default); nothing is written to disk. | `src/browser/engine.js` |
+| The interface is built from DOM text nodes; the report it produces is the same escaped report as the CLI's. | `src/browser/app.js`, `src/report/html.js` |
+
 ### Git
 | Protection | Where |
 |---|---|

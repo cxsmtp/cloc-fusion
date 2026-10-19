@@ -8,139 +8,31 @@ import { createGunzip, inflateRawSync } from 'node:zlib';
 import { open } from 'node:fs/promises';
 import { Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
+import { TarParser } from './tar.js';
 
-const BLOCK = 512;
-
-const text = (buf, start, len) => {
-  const s = buf.subarray(start, start + len);
-  const nul = s.indexOf(0);
-  return (nul < 0 ? s : s.subarray(0, nul)).toString('utf8');
-};
-
-function octal(buf, start, len) {
-  const s = buf.subarray(start, start + len);
-  if (s[0] & 0x80) {
-    // GNU base-256 for sizes over 8 GB.
-    let n = 0;
-    for (let i = 1; i < s.length; i++) n = n * 256 + s[i];
-    return n;
-  }
-  const t = text(buf, start, len).trim();
-  return t ? parseInt(t, 8) : 0;
-}
-
-/** pax extended header records ("len key=value\n") → { key: value }. */
-function paxRecords(buf) {
-  const out = {};
-  let i = 0;
-  while (i < buf.length) {
-    const sp = buf.indexOf(32, i);
-    if (sp < 0) break;
-    const len = parseInt(buf.subarray(i, sp).toString(), 10);
-    if (!len || len < 0 || i + len > buf.length) break;
-    const rec = buf.subarray(sp + 1, i + len - 1).toString('utf8');
-    const eq = rec.indexOf('=');
-    if (eq > 0) out[rec.slice(0, eq)] = rec.slice(eq + 1);
-    i += len;
-  }
-  return out;
-}
+export { stripTop } from './tar.js';
 
 /**
- * A Writable that parses a tar stream. For every regular file, `onEntry({ path, size })` returns
- * whether its content is wanted; wanted files are passed whole to `onFile({ path, size }, Buffer)`.
- * `maxFileBytes` bounds a wanted file's buffer.
+ * A Writable that parses a tar stream (src/tar.js does the parsing). For every regular file,
+ * `onEntry({ path, size })` returns whether its content is wanted; wanted files are passed whole to
+ * `onFile({ path, size }, Buffer)`. `maxFileBytes` bounds a wanted file's buffer.
  */
 export class TarReader extends Writable {
   constructor({ onEntry, onFile, maxFileBytes = 2 * 1024 * 1024, maxMetaBytes = 1024 * 1024 }) {
     super();
-    this.onEntry = onEntry;
-    this.onFile = onFile;
-    this.maxFileBytes = maxFileBytes;
-    this.maxMetaBytes = maxMetaBytes;
-    this.buf = Buffer.alloc(0);
-    this.state = 'header';
-    this.entry = null;
-    this.remaining = 0; // content bytes of the current entry still to come
-    this.padding = 0;
-    this.chunks = null;
-    this.nextPath = null; // from a pax 'x' or GNU 'L' entry
-    this.done = false;
-    this.entries = 0;
+    this.parser = new TarParser({ onEntry, onFile: (e, bytes) => onFile(e, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.length)), maxFileBytes, maxMetaBytes });
+  }
+
+  get entries() {
+    return this.parser.entries;
   }
 
   _write(chunk, _enc, cb) {
     try {
-      if (!this.done) this.consume(chunk);
+      this.parser.push(chunk);
       cb();
     } catch (err) {
       cb(err);
-    }
-  }
-
-  consume(chunk) {
-    this.buf = this.buf.length ? Buffer.concat([this.buf, chunk]) : chunk;
-    for (;;) {
-      if (this.state === 'header') {
-        if (this.buf.length < BLOCK) return;
-        const h = this.buf.subarray(0, BLOCK);
-        this.buf = this.buf.subarray(BLOCK);
-        if (h.every((b) => b === 0)) {
-          this.done = true; // end of archive
-          return;
-        }
-        const size = octal(h, 124, 12);
-        const type = String.fromCharCode(h[156] || 48);
-        const prefix = h.subarray(257, 262).toString() === 'ustar' ? text(h, 345, 155) : '';
-        const name = this.nextPath ?? (prefix ? `${prefix}/${text(h, 0, 100)}` : text(h, 0, 100));
-        this.nextPath = null;
-        this.remaining = size;
-        this.padding = (BLOCK - (size % BLOCK)) % BLOCK;
-        if (type === 'x' || type === 'L' || type === 'g') {
-          if (size > this.maxMetaBytes) throw new Error('archive metadata entry too large');
-          this.entry = { meta: type };
-          this.chunks = [];
-        } else if (type === '0' || type === '\0' || type === '7') {
-          this.entries++;
-          const e = { path: name, size };
-          const want = size <= this.maxFileBytes && this.onEntry(e);
-          this.entry = want ? e : null;
-          this.chunks = want ? [] : null;
-        } else {
-          this.entry = null; // directories, links, devices: skipped
-          this.chunks = null;
-        }
-        this.state = 'body';
-      }
-      if (this.state === 'body') {
-        if (this.remaining > 0) {
-          if (!this.buf.length) return;
-          const take = Math.min(this.remaining, this.buf.length);
-          if (this.chunks) this.chunks.push(this.buf.subarray(0, take));
-          this.buf = this.buf.subarray(take);
-          this.remaining -= take;
-          if (this.remaining > 0) return;
-        }
-        if (this.chunks) {
-          const content = Buffer.concat(this.chunks);
-          if (this.entry.meta === 'x') this.nextPath = paxRecords(content).path ?? null;
-          else if (this.entry.meta === 'L') this.nextPath = text(content, 0, content.length);
-          else if (!this.entry.meta) this.onFile(this.entry, content);
-        }
-        this.chunks = null;
-        this.entry = null;
-        this.state = 'pad';
-      }
-      if (this.state === 'pad') {
-        if (this.buf.length < this.padding) {
-          this.padding -= this.buf.length;
-          this.buf = Buffer.alloc(0);
-          return;
-        }
-        this.buf = this.buf.subarray(this.padding);
-        this.padding = 0;
-        this.state = 'header';
-      }
     }
   }
 }
@@ -230,10 +122,4 @@ export async function readZipFile(path, { onEntry, onFile, maxFileBytes = 2 * 10
   } finally {
     await fh.close();
   }
-}
-
-/** Strip the archive's single top-level folder ("owner-repo-sha/src/a.js" → "src/a.js"). */
-export function stripTop(path) {
-  const i = path.indexOf('/');
-  return i < 0 ? path : path.slice(i + 1);
 }

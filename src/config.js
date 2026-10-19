@@ -143,16 +143,4 @@ export async function resolveCredentials(conn, env = process.env) {
   return { username, token };
 }
 
-/** A copy of the configuration safe to put in a report: no secret values. */
-export function redactConfig(cfg) {
-  return {
-    ...cfg,
-    connections: (cfg.connections || []).map((c) => ({
-      name: c.name,
-      provider: c.provider,
-      apiUrl: c.apiUrl,
-      orgs: c.orgs,
-      authMethod: c.auth?.method,
-    })),
-  };
-}
+export { redactConfig } from './report/build.js';

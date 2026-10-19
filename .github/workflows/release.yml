@@ -90,8 +90,10 @@ jobs:
         with:
           path: dist
           merge-multiple: true
+      - name: The standalone page (cloc-fusion.html), rebuilt from this commit
+        run: node scripts/build-standalone.mjs && cp cloc-fusion.html dist/
       - name: Checksums
-        run: cd dist && sha256sum cloc-fusion-* > SHA256SUMS.txt && cat SHA256SUMS.txt
+        run: cd dist && sha256sum cloc-fusion-* cloc-fusion.html > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version.outputs.tag }}

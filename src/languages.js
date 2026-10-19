@@ -93,6 +93,16 @@ for (const lang of TABLE) {
   for (const f of lang.files) BY_FILE.set(f, lang);
 }
 
+const BY_NAME = new Map(TABLE.map((l) => [l.name.toLowerCase(), l]));
+// GitHub's language names (linguist) where they differ from this table's.
+const ALIASES = { 'c++': 'C++', 'objective-c': 'Objective-C', hcl: 'Terraform', vue: 'Vue', svelte: 'Svelte', scss: 'SCSS', less: 'Less', dockerfile: 'Dockerfile', makefile: 'Makefile', 'vim script': 'Vim Script', batchfile: 'Batch', 'f#': 'F#', 'c#': 'C#' };
+
+/** The language with this name (GitHub's names included), or null. */
+export function languageByName(name) {
+  const key = String(name || '').toLowerCase();
+  return BY_NAME.get(key) ?? BY_NAME.get(String(ALIASES[key] || '').toLowerCase()) ?? null;
+}
+
 /** The language of a path, or null when it is not a source file this tool knows. */
 export function languageOf(path) {
   const base = path.split('/').pop();

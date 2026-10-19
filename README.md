@@ -4,6 +4,7 @@
 
 cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as many organizations as you have. For every repository it counts lines of code and recent commits. From the commit rate it suggests how often the repository needs a Fusion scan, then works out the credits your whole estate needs. The answer is an HTML, CSV, JSON and Markdown report.
 
+- **Or just one HTML file.** Open `cloc-fusion.html` in your browser: no install, no hosting, no server. It signs in, scans and prices right in the page.
 - **A web app, not a command line.** Run it and your browser opens: sign in through the browser, check the pricing, press *Run the Fusion scan*, and watch the credits add up.
 - **On-premises.** It runs on your machine, next to your own GitHub Enterprise Server, GitLab, Azure DevOps Server or Bitbucket Data Center as well as the cloud platforms. Code, figures and tokens stay with you; there is no cloud service in between.
 - **You choose the models.** Pick which Fusion model each repository gets by change frequency, criticality or one by one, in the app or right in the HTML report, and every total follows.
@@ -15,6 +16,10 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
 - **Always current:** `cloc-fusion version` tells you what you have, and `cloc-fusion update` installs the latest release after checking its checksum.
 
 ## Quick start
+
+**The quickest way: one HTML file.** Download [`cloc-fusion.html`](cloc-fusion.html) (also attached to every release) and double-click it. Add your connections, paste a token for each (*Create a token* opens the right page with the right permissions ticked), and press *Run the Fusion scan*. See [the standalone page](#the-standalone-page-one-html-file) for what it can and can't do compared with the app.
+
+**The full app:**
 
 1. **Download** the file for your system from [Releases](../../releases), or from the *Standalone executables* workflow run's artifacts:
    `cloc-fusion-windows-x64.exe` · `cloc-fusion-macos-arm64` · `cloc-fusion-macos-x64` · `cloc-fusion-linux-x64` · `cloc-fusion-linux-arm64`
@@ -40,6 +45,7 @@ The report also shows totals and the number of credit bundles you need. It break
 
 ## Details
 
+- [The standalone page (one HTML file)](#the-standalone-page-one-html-file)
 - [How the calculation works](#how-the-calculation-works)
 - [Connecting and signing in](#connecting-and-signing-in)
 - [Commands](#commands)
@@ -51,6 +57,25 @@ The report also shows totals and the number of credit bundles you need. It break
 - [AI onboarding plan](#ai-onboarding-plan)
 - [Building from source](#building-from-source)
 - [Versions and updates](#versions-and-updates)
+
+### The standalone page (one HTML file)
+
+`cloc-fusion.html` is the whole tool in one file that opens straight from disk: no Node.js, no executable, no server. It uses the same engine as the app (same discovery, line counting, commit rules, Fusion pricing and report), compiled for the browser.
+
+| | Standalone page | App (`cloc-fusion` / executable) |
+|---|---|---|
+| Install | None: open the file | None (single executable) or Node.js 18+ |
+| Sign-in | A token per connection, kept in the page's memory only | Browser sign-in (GitHub CLI, Microsoft Entra ID, device flow) or a token |
+| GitHub | Exact lines when GitHub allows the page to download archives; otherwise **estimated** from GitHub's language statistics (about 45 bytes a line), and marked ≈ in the report | Always exact (git clones or archives) |
+| GitLab, Azure DevOps, Bitbucket Cloud | Exact (archives) | Exact |
+| Bitbucket Data Center, self-hosted servers | Works when the server allows cross-origin requests (CORS) | Always |
+| Generic Git servers | Not available (needs git) | Yes |
+| Scale | Hundreds to a few thousand repositories per run (browser memory) | 10,000+ |
+| Saved | Settings in this browser (never tokens); export/import as `cloc-fusion.config.json` | Settings file, tokens in your keychain/env |
+
+Results are the full report: open it from the page, or download it as HTML, CSV or JSON. Settings files move freely between the page, the app and the CLI.
+
+Rebuild it after changing the code with `node scripts/build-standalone.mjs` (esbuild at build time only; the page itself has no dependencies). Releases rebuild and attach it with its SHA-256.
 
 ### How the calculation works
 
@@ -226,7 +251,7 @@ Claude (`claude-opus-5-5` by default) reads the report and writes `cloc-fusion-o
 ### Building from source
 
 ```
-npm test                          # 54 tests: engines, providers, reports, web app, security, versioning
+npm test                          # 59 tests: engines, providers, reports, web app, standalone page, security, versioning
 node bench/bench.js --repos 1000  # benchmarks
 node scripts/build-binary.mjs     # standalone executable for this OS → dist/
 ```

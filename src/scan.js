@@ -4,15 +4,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { writeFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { providerOf } from './providers/index.js';
-import { resolveCredentials, redactConfig } from './config.js';
+import { resolveCredentials } from './config.js';
 import { analyzeRepo, gitVersion } from './git.js';
 import { analyzeRepoApi } from './apiengine.js';
 import { pool } from './pool.js';
-import { VERSION } from './version.js';
-import { frequencyOf, frequencyLabel, fusionEstimate, creditSummary } from './fusion.js';
-import { globToRegExp } from './languages.js';
+import { buildReport, reprice, overrideMatcher } from './report/build.js';
+import { classifyRepos, dedupeRepos } from './discover.js';
 
 export { VERSION } from './version.js';
+export { buildReport, reprice } from './report/build.js';
 
 const keyOf = (r) => `${r.connection}|${r.fullName}`;
 
@@ -33,15 +33,6 @@ export async function orgsOf(conn, session) {
   return all.map((o) => o.id).filter((id) => id !== '@me' || conn.includePersonal);
 }
 
-/** The configured overrides, compiled once: (repo) → the override settings that apply to it. */
-function overrideMatcher(cfg) {
-  const rules = Object.entries(cfg.overrides || {}).map(([pattern, o]) => [globToRegExp(pattern), o]);
-  return (repo) => {
-    const out = {};
-    for (const [re, o] of rules) if (re.test(repo.fullName) || re.test(`${repo.connection}:${repo.fullName}`)) Object.assign(out, o);
-    return out;
-  };
-}
 
 /** (host) → may this connection's clone URLs point there? Generic connections: the URLs the user typed. */
 function allowedHostsOf(provider, conn) {
@@ -90,8 +81,6 @@ export async function discover(cfg, { only = [], log = () => {} } = {}) {
     }
     const orgFilter = only.filter((o) => o.startsWith(`${conn.name}/`)).map((o) => o.slice(conn.name.length + 1));
     if (orgFilter.length) orgs = orgs.filter((o) => orgFilter.includes(o));
-    const inc = (conn.include || []).map(globToRegExp);
-    const exc = (conn.exclude || []).map(globToRegExp);
     const lists = new Array(orgs.length);
     await pool(orgs, cfg.discoveryConcurrency || 8, async (org, i) => {
       try {
@@ -104,31 +93,13 @@ export async function discover(cfg, { only = [], log = () => {} } = {}) {
     orgs.forEach((org, i) => {
       const list = lists[i];
       if (!list) return;
-      let kept = 0;
-      for (const r of list) {
-        const repo = { ...r, provider: conn.provider, connection: conn.name, org };
-        const o = overrideFor(repo);
-        let skip = null;
-        if (!cfg.includeArchived && repo.archived) skip = 'archived';
-        else if (!cfg.includeForks && repo.fork) skip = 'fork';
-        else if (inc.length && !inc.some((re) => re.test(repo.fullName))) skip = 'not included';
-        else if (exc.some((re) => re.test(repo.fullName))) skip = 'excluded';
-        else if (o.exclude) skip = 'excluded by override';
-        repos.push({ ...repo, skip, criticality: o.criticality ?? null, scansOverride: o.scans ?? null, modelOverride: o.model ?? null, locOverride: o.loc ?? null });
-        if (!skip) kept++;
-      }
+      const found = classifyRepos(cfg, conn, org, list, overrideFor);
+      repos.push(...found);
+      const kept = found.filter((r) => !r.skip).length;
       log(`  ${org}: ${list.length} repositories (${kept} to measure)`);
     });
   }
-  // The same repository reached twice (two connections, or a group and a subgroup) counts once;
-  // a copy that is measured wins over one that is skipped.
-  const byKey = new Map();
-  for (const r of repos) {
-    const k = r.cloneUrl?.toLowerCase().replace(/\.git$/, '') || keyOf(r);
-    const had = byKey.get(k);
-    if (!had || (had.skip && !r.skip)) byKey.set(k, r);
-  }
-  return { repos: [...byKey.values()], problems, sessions };
+  return { repos: dedupeRepos(repos), problems, sessions };
 }
 
 /** Measure every repository and price Fusion for them. Returns the report object. */
@@ -210,77 +181,4 @@ async function checkpoint(outDir, cfg, repos, results, problems) {
   await mkdir(outDir, { recursive: true });
   const partial = buildReport(cfg, repos.map((r) => results.get(keyOf(r)) || r), problems, { partial: true });
   await writeFile(join(outDir, 'cloc-fusion-partial.json'), JSON.stringify(partial));
-}
-
-/** Frequency, Fusion scans and credits for measured repositories; the report object. */
-export function buildReport(cfg, repos, problems = [], { started = Date.now(), partial = false } = {}) {
-  const rows = repos.map((r) => {
-    const measured = r.analyzedAt && !r.error;
-    const windowDays = r.windowDays || cfg.windowDays;
-    const f = frequencyOf(r.commits ?? 0, windowDays);
-    return {
-      ...r,
-      frequency: measured ? f.id : null,
-      frequencyLabel: measured ? frequencyLabel(f.id) : null,
-      commitsPerWeek: measured ? Math.round(f.perWeek * 100) / 100 : null,
-      commitsPerMonth: measured ? Math.round(((r.commits ?? 0) / windowDays) * 30.44 * 10) / 10 : null,
-      included: measured && !r.skip,
-    };
-  });
-  const estimate = fusionEstimate(rows, cfg.fusion);
-  // Credits are known once every counted repository's model has a rate; until then, 10K-unit scans.
-  const known = estimate.totals.units > 0 ? estimate.totals.unknownRate === 0 : true;
-  const summary = { ...creditSummary(known ? estimate.totals.credits : NaN, cfg.totals), known };
-  const measured = estimate.rows.filter((r) => r.analyzedAt && !r.error);
-  const languages = Object.create(null);
-  for (const r of measured) {
-    for (const [name, t] of Object.entries(r.languages || {})) {
-      const l = (languages[name] ||= { category: t.category, repos: 0, files: 0, code: 0, comment: 0, blank: 0 });
-      l.repos++;
-      l.files += t.files;
-      l.code += t.code;
-      l.comment += t.comment;
-      l.blank += t.blank;
-    }
-  }
-  return {
-    tool: 'cloc-fusion',
-    version: VERSION,
-    generatedAt: new Date().toISOString(),
-    partial,
-    durationSeconds: Math.round((Date.now() - started) / 1000),
-    settings: {
-      ...redactConfig(cfg),
-      fusion: estimate.settings,
-    },
-    counts: {
-      discovered: rows.length,
-      skipped: rows.filter((r) => r.skip).length,
-      measured: measured.length,
-      failed: rows.filter((r) => r.error).length,
-      empty: rows.filter((r) => r.empty).length,
-    },
-    totals: estimate.totals,
-    credits: summary,
-    byFrequency: estimate.byFrequency,
-    byModel: estimate.byModel,
-    byOrg: estimate.byOrg,
-    languages,
-    problems,
-    repos: estimate.rows,
-  };
-}
-
-/** Re-price an existing report with (new) settings, without measuring again. */
-export function reprice(report, cfg) {
-  let repos = report.repos;
-  // New repository rules (criticality, scans, model, lines) apply without a rescan; skipping needs one.
-  if (cfg.overrides) {
-    const match = overrideMatcher(cfg);
-    repos = repos.map((r) => {
-      const o = match(r);
-      return { ...r, criticality: o.criticality ?? null, scansOverride: o.scans ?? null, modelOverride: o.model ?? null, locOverride: o.loc ?? null };
-    });
-  }
-  return buildReport({ ...report.settings, ...cfg, fusion: cfg.fusion ?? report.settings.fusion, totals: cfg.totals ?? report.settings.totals, overrides: cfg.overrides ?? report.settings.overrides }, repos, report.problems || []);
 }

@@ -45,7 +45,7 @@ function repoFiles(top, n, lines) {
  * Start the mock. Returns { url, close, stats }. Repository i of organization o is
  * `org{o}/repo{i}`; its size and activity cycle through a few profiles so totals are predictable.
  */
-export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0, latencyMs = 0, token = 'test-token' } = {}) {
+export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0, latencyMs = 0, token = 'test-token', cors = false, codeloadCors = true } = {}) {
   const PROFILES = [
     { files: 5, lines: 100, commitsPerWeek: 7 },
     { files: 20, lines: 600, commitsPerWeek: 2 },
@@ -88,8 +88,17 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
     res.end(JSON.stringify(slice));
   };
 
+  // A web page (the standalone HTML) calls the API cross-origin, as it does api.github.com.
+  const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, accept, content-type, x-github-api-version', 'access-control-expose-headers': 'link, x-ratelimit-remaining, x-ratelimit-reset' };
   const api = http.createServer(async (req, res) => {
     stats.requests++;
+    if (cors) {
+      for (const [k, v] of Object.entries(CORS)) res.setHeader(k, v);
+      if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        return res.end();
+      }
+    }
     if (latencyMs) await new Promise((r) => setTimeout(r, latencyMs));
     // Faults: a share of URLs fail on their first attempt (429 or 502), then succeed, so retries
     // are exercised on every run without a run ever being unlucky enough to exhaust them.
@@ -129,6 +138,10 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
       const since = url.searchParams.get('since');
       return page(res, url, commitsFor(prof, since ? Date.parse(since) : 0));
     }
+    if ((m = p.match(/^\/repos\/org(\d+)\/repo(\d+)\/languages$/))) {
+      const prof = profileOf(Number(m[1]), Number(m[2]));
+      return res.end(JSON.stringify({ JavaScript: prof.files * prof.lines * 45, Markdown: 400 }));
+    }
     if ((m = p.match(/^\/repos\/org(\d+)\/repo(\d+)\/tarball\/main$/))) {
       const idx = PROFILES.indexOf(profileOf(Number(m[1]), Number(m[2])));
       res.writeHead(302, { location: `${codeloadUrl}/p${idx}.tar.gz?token=signed` });
@@ -141,6 +154,7 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
   // The download host: like codeload.github.com, a different origin that gets no Authorization.
   const codeload = http.createServer((req, res) => {
     stats.requests++;
+    if (cors && codeloadCors) res.setHeader('access-control-allow-origin', '*');
     if (req.headers.authorization) stats.tokenLeaks++;
     const m = req.url.match(/^\/p(\d)\.tar\.gz/);
     if (!m) {

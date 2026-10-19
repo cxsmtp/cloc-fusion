@@ -11,26 +11,11 @@ import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { readTarGz, readZipFile, stripTop } from './archive.js';
 import { makeSelector, LocTally } from './loc.js';
+import { statsFromCommits } from './commits.js';
+
+export { statsFromCommits } from './commits.js';
 
 const DAY = 86400000;
-
-/** Commit stats from [{ t, email, merge }]: count, authors, last commit, weekly series. */
-export function statsFromCommits(list, { now = Date.now(), sinceT = 0, includeMerges = false, weeks = 52 } = {}) {
-  const weekly = new Array(weeks).fill(0);
-  const authors = new Set();
-  let commits = 0;
-  let last = null;
-  for (const c of list) {
-    if (!Number.isFinite(c.t) || c.t < sinceT) continue;
-    if (c.merge && !includeMerges) continue;
-    commits++;
-    if (c.email) authors.add(String(c.email).toLowerCase());
-    if (last === null || c.t > last) last = c.t;
-    const w = Math.floor((now - c.t) / (7 * DAY));
-    if (w >= 0 && w < weeks) weekly[weeks - 1 - w]++;
-  }
-  return { commits, authors: authors.size, weekly, lastCommitAt: last ? new Date(last).toISOString() : null };
-}
 
 /** Measure one repository through the API. Same result shape as git.js analyzeRepo. */
 export async function analyzeRepoApi(repo, { session, conn, workDir, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, maxArchiveBytes, countCategories, locBasis, now = Date.now(), onPhase = () => {} }) {

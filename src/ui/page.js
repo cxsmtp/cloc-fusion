@@ -3,7 +3,7 @@
 // Every piece of text it shows goes through DOM text nodes (no HTML strings from data).
 import { NEXTGEN_CSS } from '../report/theme.js';
 
-const CSS = `
+export const UI_CSS = `
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;min-height:100vh;color:var(--text);font:14.5px/1.55 var(--font);-webkit-font-smoothing:antialiased;background-color:var(--bg);
@@ -1031,7 +1031,7 @@ export function uiPage({ key, version }) {
 <meta name="color-scheme" content="dark light">
 <title>cloc-fusion · Fusion planner</title>
 <script>try{var d=document.documentElement,t=localStorage.getItem('cf-theme'),a=localStorage.getItem('cf-accent');if(t==='auto')d.removeAttribute('data-theme');else if(t==='light')d.setAttribute('data-theme','light');if(/^(indigo|cyan|emerald|violet|amber)$/.test(a||''))d.setAttribute('data-accent',a)}catch(e){}</script>
-<style>${NEXTGEN_CSS}${CSS}</style>
+<style>${NEXTGEN_CSS}${UI_CSS}</style>
 </head>
 <body>
 <div class="aurora" aria-hidden="true"><i></i><i></i></div>

@@ -3,6 +3,11 @@
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// In a web page (the standalone HTML), the browser follows redirects itself and drops the
+// Authorization header when one leads to another origin; it does not let a page read the redirect
+// target, nor set User-Agent.
+const IN_BROWSER = typeof window !== 'undefined' && typeof window.document !== 'undefined';
+
 export class HttpError extends Error {
   constructor(message, { status, url, body } = {}) {
     super(message);
@@ -38,7 +43,7 @@ export class ApiClient {
    * @param {string[]} [o.trustedOrigins] other origins the auth headers may go to (the API root's always may)
    * @param {number} [o.maxConcurrent] requests in flight at once through this client
    */
-  constructor({ name, baseUrl, headers = {}, fetchImpl = globalThis.fetch, retries = 5, timeoutMs = 60000, trustedOrigins = [], maxConcurrent = 16 }) {
+  constructor({ name, baseUrl, headers = {}, fetchImpl = (...args) => globalThis.fetch(...args), retries = 5, timeoutMs = 60000, trustedOrigins = [], maxConcurrent = 16 }) {
     this.name = name;
     this.baseUrl = String(baseUrl || '').replace(/\/+$/, '');
     this.headers = headers;
@@ -77,9 +82,13 @@ export class ApiClient {
    * refused, and a redirect elsewhere (e.g. GitHub's archive download host) is followed without them.
    * Returns the ok Response (or the 404 / emptyOn one when allowed).
    */
-  async send(path, { method = 'GET', body, headers = {}, accept = null, allow = [], timeoutMs = this.timeoutMs } = {}) {
+  async send(path, { method = 'GET', body, headers = {}, accept = null, allow = [], timeoutMs = this.timeoutMs, retries = this.retries } = {}) {
     let url = this.url(path);
     if (!this.trusted.has(originOf(url))) throw new HttpError(`${this.name}: refusing to send credentials to ${originOf(url) || url}, which is not the configured API address`, { url });
+    // A browser keeps custom headers across a redirect, and an archive host (codeload.github.com)
+    // refuses a cross-origin request carrying them: downloads from a page send only Authorization,
+    // which the browser itself drops when the redirect leaves the API's origin.
+    const own = IN_BROWSER && accept === '*/*' ? Object.fromEntries(Object.entries(this.headers).filter(([k]) => k.toLowerCase() === 'authorization')) : this.headers;
     await this.slot();
     try {
       for (let attempt = 0; ; attempt++) {
@@ -92,10 +101,10 @@ export class ApiClient {
             this.requests++;
             res = await this.fetch(target, {
               method,
-              headers: { Accept: 'application/json', 'User-Agent': 'cloc-fusion', ...(auth ? this.headers : {}), ...(auth ? headers : {}), ...(accept ? { Accept: accept } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+              headers: { Accept: 'application/json', ...(IN_BROWSER ? {} : { 'User-Agent': 'cloc-fusion' }), ...(auth ? own : {}), ...(auth ? headers : {}), ...(accept ? { Accept: accept } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
               body: body ? JSON.stringify(body) : undefined,
               signal: AbortSignal.timeout(timeoutMs),
-              redirect: 'manual',
+              redirect: IN_BROWSER ? 'follow' : 'manual',
             });
             const loc = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
             if (!loc) break;
@@ -107,7 +116,7 @@ export class ApiClient {
           }
         } catch (err) {
           if (err instanceof HttpError) throw err;
-          if (attempt < this.retries) {
+          if (attempt < retries) {
             await sleep(Math.min(1000 * 2 ** attempt, 30000));
             continue;
           }
@@ -115,7 +124,7 @@ export class ApiClient {
         }
         if (res.ok || allow.includes(res.status)) return res;
         const retryable = res.status === 429 || res.status >= 500 || (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0');
-        const delay = retryable && attempt < this.retries ? retryDelay(res, attempt) : null;
+        const delay = retryable && attempt < retries ? retryDelay(res, attempt) : null;
         if (delay !== null) {
           await res.body?.cancel().catch(() => {});
           await sleep(delay);
@@ -161,8 +170,8 @@ export class ApiClient {
   }
 
   /** The response of a download (an archive), for streaming; allowed up to `timeoutMs` in all. */
-  async download(path, { timeoutMs = 30 * 60000 } = {}) {
-    return this.send(path, { accept: '*/*', timeoutMs });
+  async download(path, { timeoutMs = 30 * 60000, retries } = {}) {
+    return this.send(path, { accept: '*/*', timeoutMs, retries });
   }
 
   /**
@@ -225,4 +234,5 @@ export function linkNext(_data, res) {
   return null;
 }
 
-export const basic = (user, pass) => `Basic ${Buffer.from(`${user}:${pass}`).toString('base64')}`;
+const base64 = (s) => (typeof Buffer !== 'undefined' ? Buffer.from(s).toString('base64') : btoa(String.fromCharCode(...new TextEncoder().encode(s))));
+export const basic = (user, pass) => `Basic ${base64(`${user}:${pass}`)}`;

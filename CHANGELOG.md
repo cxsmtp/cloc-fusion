@@ -4,11 +4,15 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
-## [1.3.0] - 2026-10-18
+## [1.3.0] - 2026-10-19
 
-The web app, browser sign-in, and choosing your Fusion models.
+The web app, the standalone HTML page, browser sign-in, and choosing your Fusion models.
 
 ### Added
+- **The standalone page: `cloc-fusion.html`.** The whole tool in one HTML file that opens straight from disk, with no install, no Node.js and no hosting. Connections (GitHub, GitLab, Azure DevOps, Bitbucket Cloud and Data Center), Fusion pricing with models per frequency and criticality, scan settings and repository rules, the scan with live progress, and the full report (HTML, CSV, JSON), all in the page and on the same engine as the CLI.
+  - Signs in with a token per connection (*Create a token* opens the platform's page with the scopes ticked); tokens stay in the page's memory only.
+  - GitLab, Azure DevOps and Bitbucket are counted exactly. GitHub is exact when it lets the page download archives; otherwise lines are estimated from its language statistics and marked ≈ in the report.
+  - Settings are remembered in the browser (never tokens) and export/import as `cloc-fusion.config.json`. Releases attach the page with its SHA-256; `node scripts/build-standalone.mjs` rebuilds it.
 - **The web app.** `cloc-fusion` with no command (or `cloc-fusion ui`, or a double-click on the executable) opens a local page in your browser, in the next-gen look:
   - **Connections:** add GitHub, GitLab, Azure DevOps, Bitbucket or any Git; pick organizations from the ones found, or every one.
   - **Fusion pricing, scan settings and repository rules**, with the same options as the configuration file.
@@ -21,6 +25,7 @@ The web app, browser sign-in, and choosing your Fusion models.
 - **Import settings** in the app, and `cloc-fusion price --config <settings>`, read those downloaded settings.
 
 ### Changed
+- The engine's shared parts (report builder, repository discovery rules, tar parser, commit statistics, token pages) are plain JavaScript modules, used by the CLI, the app and the standalone page alike. Line counting is faster (about 155 MB/s per core, from 110).
 - `price` (CLI and app) applies repository rules (criticality, scans, model, lines) without a rescan.
 - The report's repository table shows the plan first: change frequency, criticality, Fusion scans, model and credits, then the measurements. The CSV gains a Criticality column.
 - `cloc-fusion` with no arguments starts the web app; `--help` shows the commands.

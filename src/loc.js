@@ -104,7 +104,8 @@ export function countText(text, lang) {
   return { code, comment, blank };
 }
 
-const looksBinary = (buf) => buf.subarray(0, 8000).includes(0);
+const looksBinary = (buf) => typeof buf !== 'string' && buf.subarray(0, 8000).includes(0);
+const utf8 = new TextDecoder();
 
 /**
  * A function (path, size) → language or null: which files to count (known languages, not
@@ -142,7 +143,7 @@ export class LocTally {
 
   add(lang, buf) {
     if (looksBinary(buf)) return;
-    const c = countText(buf.toString('utf8'), lang);
+    const c = countText(typeof buf === 'string' ? buf : utf8.decode(buf), lang);
     const t = (this.languages[lang.name] ||= { category: lang.category, files: 0, code: 0, comment: 0, blank: 0 });
     t.files++;
     t.code += c.code;

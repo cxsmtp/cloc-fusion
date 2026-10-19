@@ -70,6 +70,7 @@ export function toHtml(report) {
     u: /^https?:\/\//i.test(r.webUrl || '') ? r.webUrl : null,
     lg: r.mainLanguage || '',
     loc: r.lines ?? r.loc ?? null,
+    es: r.locEstimated ? 1 : 0,
     cm: r.commits ?? null,
     cw: r.commitsPerWeek ?? null,
     au: r.authors ?? null,
@@ -421,7 +422,7 @@ var shown=view.slice(0,limit);more.hidden=every.hidden=shown.length>=view.length
 tbody.innerHTML=shown.map(function(r,i){
 var name=r.u&&/^https?:/i.test(r.u)?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
 var status=r.st==='ok'?'<span class="status ok">measured</span>':r.st==='failed'?'<span class="status bad" title="'+esc(r.er)+'">failed</span>':'<span class="status warn">'+esc(r.st)+'</span>';
-return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.fq)+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.crit(r):fmt(r.cr))+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.scans(r):fmt(r.sc))+'</td><td'+(T?' class="pick"':'')+'>'+(T?T.model(r):esc(r.md))+'</td><td class="n cd">'+fmt(r.cd,1)+'</td><td class="n">'+fmt(r.loc)+'</td><td class="n">'+fmt(r.un)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.lg)+'</td><td>'+status+'</td></tr>'}).join('');
+return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.fq)+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.crit(r):fmt(r.cr))+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.scans(r):fmt(r.sc))+'</td><td'+(T?' class="pick"':'')+'>'+(T?T.model(r):esc(r.md))+'</td><td class="n cd">'+fmt(r.cd,1)+'</td><td class="n"'+(r.es?' title="Estimated from the platform&#39;s language statistics"':'')+'>'+(r.es?'≈ ':'')+fmt(r.loc)+'</td><td class="n">'+fmt(r.un)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.lg)+'</td><td>'+status+'</td></tr>'}).join('');
 all$('#repos th').forEach(function(th){th.setAttribute('aria-sort',th.getAttribute('data-k')===sortKey?(dir>0?'ascending':'descending'):'none')});
 }
 all$('#repos th').forEach(function(th){th.addEventListener('click',function(){var k=th.getAttribute('data-k');if(k===sortKey)dir=-dir;else{sortKey=k;dir=['n','o','lg','md','st','fr','lc'].indexOf(k)>=0?1:-1}render()})});
