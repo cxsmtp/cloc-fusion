@@ -122,7 +122,6 @@ export function toHtml(report) {
 <style>
 ${NEXTGEN_CSS}
 ${TUNE_CSS}
-${BRAND_CSS}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{margin:0;min-height:100vh;color:var(--text);font:14.5px/1.55 var(--font);font-feature-settings:"kern","liga","ss01";-webkit-font-smoothing:antialiased;background-color:var(--bg);
@@ -283,6 +282,7 @@ footer{margin-top:28px;color:var(--muted);font-size:12px;display:flex;gap:10px;f
 @media (max-width:520px){.topbar-in{padding:10px 16px;gap:8px}.wrap{padding:0 16px 56px}.chip.when{display:none}.journey{grid-template-columns:1fr}.tile-value{font-size:24px}.label-sm span{display:none}.label-sm{width:38px;padding:0;justify-content:center}input[type=search]{min-width:0;flex-basis:100%}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.aurora{display:none}.pre .reveal:not(.in){opacity:1;transform:none}.pre .reveal:not(.in) .cad-bar span,.pre .reveal:not(.in) .lang-bar span{transform:none}}
 @media print{.aurora,.look,#print,.tools,.more,.hero-actions,.next button{display:none!important}body{background:#fff;color:#000}.glass,.tile{backdrop-filter:none;box-shadow:none}.pre .reveal:not(.in){opacity:1;transform:none}.pre .reveal:not(.in) .cad-bar span,.pre .reveal:not(.in) .lang-bar span{transform:none}}
+${BRAND_CSS}
 </style>
 </head>
 <body class="pre">

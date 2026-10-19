@@ -11,7 +11,7 @@ const FORMATS = { woff2: 'woff2', woff: 'woff', otf: 'opentype', ttf: 'truetype'
 const faces = [];
 for (const file of existsSync(DIR) ? readdirSync(DIR).sort() : []) {
   const ext = file.split('.').pop().toLowerCase();
-  if (!FORMATS[ext] || /italic/i.test(file)) continue;
+  if (!FORMATS[ext] || /italic|cond/i.test(file)) continue; // upright, normal width only
   const key = Object.keys(WEIGHTS)
     .sort((a, b) => b.length - a.length)
     .find((w) => file.toLowerCase().replace(/[-_ ]/g, '').includes(w));

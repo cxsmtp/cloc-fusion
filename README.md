@@ -75,7 +75,7 @@ The report also shows totals and the number of credit bundles you need. It break
 
 Results are the full report: open it from the page, or download it as HTML, CSV or JSON. Settings files move freely between the page, the app and the CLI.
 
-**Branding:** the page and the HTML report carry the Checkmarx logo and use Founders Grotesk. The font is a licensed typeface and is not in the repository: it shows where it is installed, and to build it in, put the web font files in `assets/fonts/founders-grotesk/` and run `node scripts/embed-brand-font.mjs` (see the README there).
+**Branding:** the page and the HTML report carry the Checkmarx logo and are set in Founders Grotesk (Checkmarx's licensed brand typeface), built into the file so it shows the same on any machine. The font files are in `assets/fonts/founders-grotesk/`; `node scripts/embed-brand-font.mjs` rebuilds them in.
 
 Rebuild it after changing the code with `node scripts/build-standalone.mjs` (esbuild at build time only; the page itself has no dependencies). Releases rebuild and attach it with its SHA-256.
 

@@ -23,7 +23,7 @@ ${local}
 --ng-ambient-1:transparent;--ng-ambient-2:transparent;--ng-ambient-3:transparent;--ng-wordmark:linear-gradient(var(--text),var(--text));
 --font:"Founders Grotesk","CF Jakarta",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
 --mono:var(--font)}
-body{font-variant-numeric:tabular-nums}
+td,th,.hero-figure,.tile-value,.big-figure,.tune-kpi b,.tile b,.cad-fig,.lang-fig,input[type=number]{font-variant-numeric:tabular-nums}
 .log,code{font-family:"CF Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 :root[data-theme="dark"]{--bg:#0a0b14;--surface:#12131f;--surface-2:#171827;--surface-3:#1f2032;--ng-glass:#12131f;--ng-glass-line:rgb(255 255 255/.08)}
 :root:not([data-theme="dark"]){--ng-glass:#fff}
@@ -32,8 +32,13 @@ body{background-image:none!important}
 .glass,.tile,.tune-kpi{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .grad,.hero h1 .grad{background:none!important;color:var(--accent)!important;-webkit-text-fill-color:currentColor;animation:none!important}
 .eyebrow{color:var(--ng-head);letter-spacing:.12em}
-h1,h2,h3,.hero h1{letter-spacing:-.01em}
-.hero h1{font-weight:600}
+body{font-size:15.5px}
+h1,h2,h3,.hero h1{letter-spacing:-.005em}
+.hero h1{font-weight:500}
+h2,h3,.card-h h2,.conn-name,.step-title,.tune h3{font-weight:500}
+.hero-figure,.tile-value,.big-figure,.tune-kpi b,.tile b,.cad-fig b,.code{letter-spacing:0;font-weight:500}
+button,.btn,.seg label,.seg button{font-weight:500}
+.eyebrow,.tile-label,th,thead th,.field>span,.ready-label,.tune-kpi span{font-weight:500;letter-spacing:.1em}
 button.golden{color:#fff!important;border-color:transparent!important;background:var(--ng-solid)!important;box-shadow:none!important;animation:none!important;filter:none}
 button.golden:hover:not(:disabled){filter:brightness(1.08)}
 button.golden:disabled{background:color-mix(in srgb,var(--text) 18%,transparent)!important;color:var(--muted)!important}

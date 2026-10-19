@@ -1,15 +1,9 @@
 # Founders Grotesk
 
-Founders Grotesk (Klim Type Foundry) is a commercial typeface: it is not included here. The page
-and report ask for it by name, so it shows wherever it is installed.
+Founders Grotesk (© Klim Type Foundry) is the Checkmarx brand typeface, used here under
+Checkmarx's licence. These are the Regular, Medium, Semibold and Bold weights as WOFF2, trimmed to
+Latin characters, built into `cloc-fusion.html` and every HTML report by
+`node scripts/embed-brand-font.mjs` (then `node scripts/build-standalone.mjs`).
 
-To build it into `cloc-fusion.html` and every HTML report (so it shows on any machine), put your
-licensed web font files in this folder, for example:
-
-    founders-grotesk-regular.woff2
-    founders-grotesk-medium.woff2
-    founders-grotesk-semibold.woff2
-    founders-grotesk-bold.woff2
-
-then run `node scripts/embed-brand-font.mjs` and `node scripts/build-standalone.mjs`. Check that your
-licence covers embedding the font in documents you share before committing these files.
+To change them, replace the files here (any of .woff2, .woff, .otf, .ttf; one per weight, upright,
+normal width) and run both scripts again.
