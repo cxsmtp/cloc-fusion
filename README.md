@@ -227,12 +227,12 @@ Reports are written to `cloc-fusion-output/`:
 
 ### Scale and performance
 
-These results come from the mock-API and local-git [benchmarks](docs/BENCHMARKS.md), run on a 4-CPU machine:
+These results come from the mock-API and local-git [benchmarks](docs/BENCHMARKS.md), run on 1.3.0 on a 4-CPU machine (all versions: [report](docs/SECURITY-REPORT.md#performance)):
 
-- **API engine:** 10,000 repositories, 47,525 requests including 755 injected 429/502 errors. **0 failures**, 74 s, 310 MB peak memory.
-- **Git engine:** 10,000 repositories cloned and measured. **0 failures**, 9–13 min on 4 CPUs, under 200 MB.
-- **Line counting:** 77–110 MB/s per core (about 3–4 million lines a second).
-- **Reports:** 10,000 repositories built in 0.3 s and written in about 3 s. The HTML report opens in 0.6 s.
+- **API engine:** 10,000 repositories, 47,451 requests including 681 injected 429/502 errors. **0 failures**, 44.5 s, 299 MB peak memory.
+- **Git engine:** 10,000 repositories cloned and measured. **0 failures**, 5.2 min on 4 CPUs, 145 MB.
+- **Line counting:** 132 MB/s per core (about 7 million lines a second).
+- **Reports:** 10,000 repositories built in 0.12 s and written in 1.8 s. The HTML report opens in 0.6 s.
 
 **Built to survive long runs:**
 - Retries with backoff on 429, 5xx and network errors; the GitHub rate-limit reset is honoured.
