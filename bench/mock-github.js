@@ -178,9 +178,16 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
     url,
     stats,
     profiles: PROFILES,
-    close: () => Promise.all([new Promise((r) => api.close(r)), new Promise((r) => codeload.close(r))]).then(() => {
-      api.closeAllConnections?.();
-      codeload.closeAllConnections?.();
-    }),
+    // Idle keep-alive connections are closed too, at once: Node 18 would otherwise wait for them.
+    close: () =>
+      Promise.all(
+        [api, codeload].map(
+          (srv) =>
+            new Promise((r) => {
+              srv.close(r);
+              srv.closeAllConnections?.();
+            }),
+        ),
+      ),
   };
 }

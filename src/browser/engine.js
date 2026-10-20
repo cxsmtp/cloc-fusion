@@ -37,7 +37,18 @@ export async function readTarGzWeb(body, { onEntry, onFile, maxFileBytes, maxArc
   return { entries: parser.entries };
 }
 
+/** Whether this runtime can inflate raw deflate data (every current browser; Node 21.2+). */
+export const canInflateRaw = (() => {
+  try {
+    new DecompressionStream('deflate-raw');
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
 async function inflateRaw(bytes, limit) {
+  if (!canInflateRaw) return null; // the entry is skipped, as an unreadable one would be
   const reader = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw')).getReader();
   const parts = [];
   let n = 0;

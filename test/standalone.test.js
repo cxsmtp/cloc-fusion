@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { gzipSync, deflateRawSync } from 'node:zlib';
-import { readTarGzWeb, readZipBytes, measureRepo, estimateFromLanguages, BYTES_PER_LINE } from '../src/browser/engine.js';
+import { readTarGzWeb, readZipBytes, measureRepo, estimateFromLanguages, BYTES_PER_LINE, canInflateRaw } from '../src/browser/engine.js';
 import { analyzeRepoApi } from '../src/apiengine.js';
 import { startMockGitHub, tar } from '../bench/mock-github.js';
 import { providerOf } from '../src/providers/index.js';
@@ -65,7 +65,9 @@ test('browser engine: .zip read in memory (Azure DevOps), stored and deflated en
   const { entries } = await readZipBytes(bytes, { onEntry: () => true, onFile: (e, c) => (got[e.path] = new TextDecoder().decode(c)), maxFileBytes: 1e6, maxArchiveBytes: 1e9 });
   assert.equal(entries, 2);
   assert.equal(got['src/a.js'], 'let a;\nlet b;\n');
-  assert.equal(got['src/b.py'], 'x = 1\n'.repeat(50));
+  // Deflated entries need DecompressionStream('deflate-raw'): every current browser, Node 21.2+.
+  if (canInflateRaw) assert.equal(got['src/b.py'], 'x = 1\n'.repeat(50));
+  else assert.equal(got['src/b.py'], undefined);
   await assert.rejects(readZipBytes(new Uint8Array(100), { onEntry: () => true, onFile: () => {}, maxFileBytes: 1e6, maxArchiveBytes: 1e9 }), /not a zip/);
 });
 
