@@ -37,6 +37,7 @@ The web app, the standalone HTML page, browser sign-in, and choosing your Fusion
 - `cloc-fusion` with no arguments starts the web app; `--help` shows the commands.
 
 ### Security
+- The "create a token" link is only ever an http(s) URL, whatever the configured API URL holds (Checkmarx deep scan, `tokenpages.js`).
 - **Checkmarx One scan of this release** (SAST, SCA, KICS, secret detection; 3 critical, 10 high, 11 medium, 15 low), every finding triaged. Fixed:
   - command injection on Windows: the GitHub host taken from the API address went to `gh` through the Windows shell, and a URL host may contain `&` or `$()`; only a plain host name is accepted now (critical);
   - prototype pollution: the web app and the standalone page keep per-connection state in prototype-free maps (high);

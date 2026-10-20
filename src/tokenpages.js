@@ -4,6 +4,8 @@
 export const webOf = (conn, fallback) => {
   try {
     const u = new URL(conn.apiUrl || fallback);
+    // Only a web link: never a javascript:, data: or file: URL from a hand-edited setting.
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return '';
     if (u.host === 'api.github.com') return 'https://github.com';
     if (u.host === 'api.bitbucket.org') return 'https://bitbucket.org';
     return `${u.protocol}//${u.host}`;
@@ -14,6 +16,11 @@ export const webOf = (conn, fallback) => {
 
 /** Where to create a token for a connection, with scopes pre-selected where the platform allows. */
 export function tokenPageUrl(conn) {
+  const url = tokenPageFor(conn);
+  return /^https?:\/\//.test(url) ? url : '';
+}
+
+function tokenPageFor(conn) {
   const name = encodeURIComponent('cloc-fusion');
   switch (conn.provider) {
     case 'github':

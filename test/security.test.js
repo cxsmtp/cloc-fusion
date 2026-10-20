@@ -151,3 +151,12 @@ test('a GitHub host that is not a plain host name never reaches the gh command l
     await assert.rejects(cliBrowserLogin('gh', { apiUrl }), /not a valid GitHub host/);
   }
 });
+
+test('the token page link is only ever an http(s) URL', async () => {
+  const { tokenPageUrl } = await import('../src/tokenpages.js');
+  assert.equal(tokenPageUrl({ provider: 'github', apiUrl: 'https://ghe.acme.test/api/v3' }), 'https://ghe.acme.test/settings/tokens/new?scopes=repo,read:org&description=cloc-fusion');
+  for (const apiUrl of ['javascript:alert(1)', 'data:text/html,x', 'file:///etc/passwd']) {
+    assert.equal(tokenPageUrl({ provider: 'github', apiUrl }), '', apiUrl);
+    assert.equal(tokenPageUrl({ provider: 'bitbucket-server', apiUrl }), '', apiUrl);
+  }
+});
