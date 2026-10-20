@@ -253,16 +253,6 @@ cloc-fusion ai-plan --input cloc-fusion-output/cloc-fusion-report.json [--anonym
 
 Claude (`claude-opus-5-5` by default) reads the report and writes `cloc-fusion-onboarding-plan.md`. The plan covers onboarding waves, a credit budget across the period, the levers to reduce spend, and data gaps. It needs an Anthropic API key (`ANTHROPIC_API_KEY`). The standalone executables include the SDK; from source, run `npm install @anthropic-ai/sdk` first. `--anonymize` replaces repository and organization names with hashes before anything is sent.
 
-### Checkmarx One Fusion scan of a project
-
-`scripts/fusion-scan.mjs` runs a Fusion scan on a Checkmarx One application and saves its results (summary, microservices, cloud resources and updated risk scores) from the Fusion Dispatcher and Fusion Results APIs. It needs only an API key; the tenant and hosts are read from it:
-
-```
-CX_APIKEY=… node scripts/fusion-scan.mjs --app <application id> [--out fusion-results.json]
-```
-
-`--dispatcher` and `--results` set the services' paths if your tenant mounts them elsewhere (defaults `/api/fusion-dispatcher` and `/api/fusion-results`); `--no-start` only reads the latest Fusion scan.
-
 ### Building from source
 
 ```
