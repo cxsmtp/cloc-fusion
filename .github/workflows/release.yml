@@ -92,6 +92,10 @@ jobs:
           merge-multiple: true
       - name: The standalone page (cloc-fusion.html), rebuilt from this commit
         run: node scripts/build-standalone.mjs && cp cloc-fusion.html dist/
+      - name: Open-source components have no known high or critical vulnerability (npm audit)
+        run: npm ci --no-audit --no-fund --ignore-scripts && npm audit --audit-level=high
+      - name: Software bill of materials (CycloneDX)
+        run: npm sbom --sbom-format cyclonedx > dist/cloc-fusion-sbom.cdx.json
       - name: Checksums
         run: cd dist && sha256sum cloc-fusion-* cloc-fusion.html > SHA256SUMS.txt && cat SHA256SUMS.txt
       - uses: softprops/action-gh-release@v2

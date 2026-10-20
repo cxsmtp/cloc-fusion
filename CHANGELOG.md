@@ -4,6 +4,23 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Security
+- The "create a token" link is only ever an http(s) URL, whatever the configured API address holds (Checkmarx).
+- The setup wizard saves a pasted token to the owner-only `~/.cloc-fusion/credentials.json`, as the web app does, instead of the configuration file, so the configuration file can be shared (Checkmarx).
+- The zip reader refuses a central directory over 256 MB before allocating for it (Checkmarx).
+- Releases attach a CycloneDX bill of materials (`cloc-fusion-sbom.cdx.json`), and the release stops if `npm audit` reports a high or critical vulnerability.
+
+### Added
+- [Security and performance report](docs/SECURITY-REPORT.md): every Checkmarx One scan, every finding and what was done about it, the open-source components and their status, and the benchmark by version. A summary is at the top of the README.
+
+### Fixed
+- The benchmark's report sizes listed the contributors CSV in place of the report CSV.
+
+### Verification
+- **Checkmarx One** on 627c309 (SAST, SCA, KICS, secret detection, API security): 1 critical, 9 high, 10 medium, 14 low; no new findings, the two fixed findings gone, 0 SCA findings. Every remaining finding is by design ([report](docs/SECURITY-REPORT.md#by-design)).
+- **Open-source components:** 0 known vulnerabilities.
+- **Tests:** 66 passing.
+
 ## [1.3.0] - 2026-10-20
 
 The web app, the standalone HTML page, browser sign-in, and choosing your Fusion models.
@@ -37,9 +54,6 @@ The web app, the standalone HTML page, browser sign-in, and choosing your Fusion
 - `cloc-fusion` with no arguments starts the web app; `--help` shows the commands.
 
 ### Security
-- The setup wizard no longer writes a pasted token into the configuration file: it goes to the owner-only `~/.cloc-fusion/credentials.json`, as in the web app, so the configuration file can be shared (Checkmarx, `wizard.js`).
-- The zip reader refuses a central directory over 256 MB before allocating for it (Checkmarx, `archive.js`).
-- The "create a token" link is only ever an http(s) URL, whatever the configured API URL holds (Checkmarx deep scan, `tokenpages.js`).
 - **Checkmarx One scan of this release** (SAST, SCA, KICS, secret detection; 3 critical, 10 high, 11 medium, 15 low), every finding triaged. Fixed:
   - command injection on Windows: the GitHub host taken from the API address went to `gh` through the Windows shell, and a URL host may contain `&` or `$()`; only a plain host name is accepted now (critical);
   - prototype pollution: the web app and the standalone page keep per-connection state in prototype-free maps (high);
@@ -50,6 +64,12 @@ The web app, the standalone HTML page, browser sign-in, and choosing your Fusion
 - By design, and documented in SECURITY.md: requests to the API and clone addresses you configure (SSRF), http for servers you configured as http, the `command` token source running your own command through your shell, tokens kept in owner-only files when you choose to store them, and the release download whose SHA-256 is checked before use. The secret-detection hit is a fake `user:token@` URL in the test that proves such URLs are refused.
 - The web app listens on 127.0.0.1 only, checks the `Host` header, needs a per-run key on every call, accepts JSON only, and serves a strict Content Security Policy. See [SECURITY.md](SECURITY.md#the-web-app).
 
+### Verification
+- **Checkmarx One** (SAST, SCA, KICS, secret detection, API security; containers and AI supply chain on a later scan): the release scan found 1 critical, 10 high, 11 medium and 14 low, down from 3 critical and 15 low before the fixes listed under *Security*. Every finding is fixed or by design, with the reason in the [security and performance report](docs/SECURITY-REPORT.md).
+- **Open-source components:** 0 known vulnerabilities (Checkmarx SCA, `npm audit`). No runtime dependencies; the optional Anthropic SDK and its 7 dependencies are listed in the [SBOM](docs/sbom.cdx.json).
+- **Performance** (10,000 repositories, 4 CPUs): API engine 10,000 measured, **0 failed**, 47,451 requests with 681 injected errors, 44.5 s (225 repos/s, from 135), 299 MB; report built in 0.12 s and written in 1.8 s; line counting 132 MB/s per core.
+- **Tests:** 65 passing on Node 18 and 22, on Windows, macOS and Linux.
+
 ## [1.2.1] - 2026-10-15
 
 ### Fixed
@@ -59,6 +79,11 @@ The web app, the standalone HTML page, browser sign-in, and choosing your Fusion
 ### Changed
 - Benchmark and test fault injection is deterministic: a share of URLs fail on their first attempt only. Retries are exercised on every run, and no run can exhaust them by chance (a CI run on Windows did).
 - Verified end to end: a 1.1.9 executable updated itself to the published 1.2.0 release, and the installed file matches the release's SHA-256.
+
+### Verification
+- **Open-source components:** 0 known vulnerabilities in this version's lockfile (`npm audit`, checked 2026-10-20).
+- **Checkmarx One:** not scanned at this version; see 1.3.0.
+- **Performance:** measuring code unchanged since 1.1.0 (see its benchmark).
 
 ## [1.2.0] - 2026-10-15
 
@@ -92,6 +117,11 @@ The next-gen look, and always knowing which version you have.
 
 ### Fixed
 - Piping output into a command that stops reading (`| head`) exits quietly instead of failing with EPIPE.
+
+### Verification
+- **Open-source components:** 0 known vulnerabilities in this version's lockfile (`npm audit`, checked 2026-10-20).
+- **Checkmarx One:** not scanned at this version; see 1.3.0.
+- **Performance:** measuring code unchanged since 1.1.0 (see its benchmark).
 
 ## [1.1.0] - 2026-10-15
 
@@ -140,6 +170,11 @@ Zero-install, hardened, and proven at 10,000 repositories.
 - Archive downloads are allowed up to 30 minutes instead of the 60-second API timeout.
 - Pagination tolerates a non-list page instead of throwing.
 
+### Verification
+- **Performance** (10,000 repositories, 4 CPUs, [benchmarks](docs/BENCHMARKS.md)): API engine 10,000 measured, **0 failed**, 47,525 requests with 755 injected errors, 74 s, 310 MB; git engine 10,000 measured, **0 failed**, 9.3–12.7 min, under 200 MB; report written in 3.3 s; line counting 77–110 MB/s per core; a 10,000-row HTML report loads in 0.57 s.
+- **Open-source components:** 0 known vulnerabilities in this version's lockfile (`npm audit`, checked 2026-10-20).
+- **Checkmarx One:** not scanned at this version; see 1.3.0.
+
 ## [1.0.0] - 2026-10-15
 
 First release.
@@ -160,6 +195,11 @@ First release.
 - **`price`**: re-price a report with new settings without scanning again. **`--resume`**: continue from a partial report; a checkpoint is written every 30 seconds.
 - **AI onboarding plan** (`ai-plan`, optional): Claude writes a phased Fusion onboarding plan from the report; `--anonymize` hashes names first.
 - Proxy support (`HTTPS_PROXY`) and friendly errors for authentication, rate limits and sign-in pages.
+
+### Verification
+- **Open-source components:** 0 known vulnerabilities in this version's lockfile (`npm audit`, checked 2026-10-20).
+- **Checkmarx One:** a scan was started but did not complete; see 1.3.0.
+- **Performance:** not benchmarked at scale; see 1.1.0.
 
 [Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.0...HEAD
 [1.3.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.1...v1.3.0

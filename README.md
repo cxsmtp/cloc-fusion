@@ -12,7 +12,7 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
 - **Every platform, every organization**, picked in a guided setup that also handles SSO sign-in.
 - **Built for scale:** benchmarked at 10,000 repositories, with 47,000+ API calls and injected failures, and 0 lost ([benchmarks](docs/BENCHMARKS.md)).
 - **Secure by design:** tokens are never stored by default, never leave their host, and never appear in reports ([security](SECURITY.md)).
-- **A report you'll want to show:** the next-gen Obsidian and Daylight look, with a glowing readiness ring, smooth motion and one-click CSV download of the plan.
+- **A report you'll want to show:** the Checkmarx look, light and dark, with one-click CSV download of the plan.
 - **Always current:** `cloc-fusion version` tells you what you have, and `cloc-fusion update` installs the latest release after checking its checksum.
 
 ## Quick start
@@ -40,6 +40,18 @@ This example is priced at 2 credits per 10K LOC; you set your own rate.
 | legacy-batch | 23,900 | 0 | Not in the window | 1 | 6 |
 
 The report also shows totals, the number of credit bundles you need, and the **contributing developers in the last 90 days**: per repository, per organization and unique across the estate, with the full list of people and bots and the repositories each contributed to. It breaks the estate down by change frequency, organization, Fusion model and language, and includes a 52-week activity sparkline per repository.
+
+## Verified: security and performance
+
+| | Status |
+|---|---|
+| **Checkmarx One** (SAST, SCA, IaC, secrets, API security, containers, AI supply chain) | ✅ No open exploitable finding: each one fixed, or by design with the reason given |
+| **Open-source components** | ✅ 0 known vulnerabilities (Checkmarx SCA and `npm audit`, every version) · no runtime dependencies · [SBOM](docs/sbom.cdx.json) |
+| **Scale** | ✅ 10,000 repositories, 0 failures, through 681 injected API errors |
+| **Speed** (1.3.0, 4 CPUs) | API engine 225 repos/s · line counting 132 MB/s per core · 10,000-repo report in 1.8 s |
+| **Tests** | ✅ 66 tests on Node 18 and 22, Windows, macOS and Linux |
+
+The full scan history, every finding and what was done about it, the bill of materials and the benchmark by version are in the [security and performance report](docs/SECURITY-REPORT.md). Each version's status is also in the [CHANGELOG](CHANGELOG.md).
 
 ---
 
@@ -243,7 +255,7 @@ A summary; [SECURITY.md](SECURITY.md) has the threat model and every protection.
 - **Git is locked down:** https only (file/http only for servers you configure), clone hosts checked against the connection, URLs and branches validated, and no option injection.
 - **Hostile input is bounded:** API answers are capped at 64 MB, archives have decompression limits, archive entries are never written to disk, and report data is escaped (HTML, CSV and Markdown).
 - **The web app is local only:** it listens on 127.0.0.1, refuses any other `Host` (no DNS rebinding), requires a random per-run key on every call, and serves a strict Content Security Policy.
-- **Small attack surface:** zero runtime dependencies; scanned with Checkmarx One and regression-tested in `test/security.test.js`.
+- **Small attack surface:** no runtime dependencies (the optional AI plan uses the Anthropic SDK); scanned with Checkmarx One and regression-tested in `test/security.test.js`. See the [security and performance report](docs/SECURITY-REPORT.md).
 
 ### AI onboarding plan
 

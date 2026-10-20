@@ -150,7 +150,7 @@ async function reportScenario() {
       const build = performance.now() - t0;
       const paths = await writeReports(report, out);
       const sizes = {};
-      for (const p of paths) sizes[p.split('.').pop()] = `${((await stat(p)).size / 1048576).toFixed(1)} MB`;
+      for (const p of paths) sizes[p.split(/[\\/]/).pop()] = `${((await stat(p)).size / 1048576).toFixed(1)} MB`;
       return { buildMs: Math.round(build), sizes };
     });
   } finally {

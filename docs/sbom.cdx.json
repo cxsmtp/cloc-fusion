@@ -1,0 +1,473 @@
+{
+  "$schema": "http://cyclonedx.org/schema/bom-1.5.schema.json",
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.5",
+  "serialNumber": "urn:uuid:2752e329-dea7-4fd0-a55d-5643342b61a8",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-20T17:50:18.074Z",
+    "lifecycles": [
+      {
+        "phase": "build"
+      }
+    ],
+    "tools": [
+      {
+        "vendor": "npm",
+        "name": "cli",
+        "version": "10.9.4"
+      }
+    ],
+    "component": {
+      "bom-ref": "cloc-fusion@1.3.0",
+      "type": "library",
+      "name": "cloc-fusion",
+      "version": "1.3.0",
+      "scope": "required",
+      "description": "Count lines of code and commit activity across every repository of your GitHub, GitLab, Azure DevOps and Bitbucket organizations, suggest Checkmarx One Fusion scan frequency, and work out the credits needed.",
+      "purl": "pkg:npm/cloc-fusion@1.3.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": ""
+        }
+      ],
+      "externalReferences": [],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  },
+  "components": [
+    {
+      "bom-ref": "@anthropic-ai/sdk@0.134.0",
+      "type": "library",
+      "name": "@anthropic-ai/sdk",
+      "version": "0.134.0",
+      "scope": "optional",
+      "author": "Anthropic",
+      "description": "The official TypeScript library for the Anthropic API",
+      "purl": "pkg:npm/%40anthropic-ai/sdk@0.134.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@anthropic-ai/sdk"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@anthropic-ai/sdk/-/sdk-0.134.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/anthropics/anthropic-sdk-typescript.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/anthropics/anthropic-sdk-typescript#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/anthropics/anthropic-sdk-typescript/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "8f40cd5d72942a4af790ac9547f237a4f595bfdde0eef8078e0198821f6e097bf920aa1764f5a64f05ca895abf49949b841683dca9ad2a122ccf3b7c7419f3a2"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@babel/runtime@7.29.10",
+      "type": "library",
+      "name": "@babel/runtime",
+      "version": "7.29.10",
+      "scope": "optional",
+      "author": "The Babel Team",
+      "description": "babel's modular runtime helpers",
+      "purl": "pkg:npm/%40babel/runtime@7.29.10",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@babel/runtime"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@babel/runtime/-/runtime-7.29.10.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/babel/babel.git"
+        },
+        {
+          "type": "website",
+          "url": "https://babel.dev/docs/en/next/babel-runtime"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/babel/babel/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "369ba04f36ca806acd7b8e548b7d9c37cbc214533156d3fff6bb5fc2fd273f91510c08ef601c4970b569600f66af58f13fa727213ef1f4b533b834db59860d44"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@opentelemetry/api@1.9.1",
+      "type": "library",
+      "name": "@opentelemetry/api",
+      "version": "1.9.1",
+      "scope": "optional",
+      "author": "OpenTelemetry Authors",
+      "description": "Public API for OpenTelemetry",
+      "purl": "pkg:npm/%40opentelemetry/api@1.9.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@opentelemetry/api"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@opentelemetry/api/-/api-1.9.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/open-telemetry/opentelemetry-js.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/open-telemetry/opentelemetry-js/tree/main/api"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/open-telemetry/opentelemetry-js/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "80bc8994f1cf658740935244340f4b7877a365ed538bbeffa537859bf9cc5e6407fc715995c4bf3b65c907e2fc7e46eb352aa176d96f8c1563c705186a7347e5"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "@stablelib/base64@1.0.1",
+      "type": "library",
+      "name": "@stablelib/base64",
+      "version": "1.0.1",
+      "scope": "optional",
+      "author": "Dmitry Chestnykh",
+      "description": "Base64 encoding and decoding",
+      "purl": "pkg:npm/%40stablelib/base64@1.0.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/@stablelib/base64"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/@stablelib/base64/-/base64-1.0.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/StableLib/stablelib.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/StableLib/stablelib/tree/master/packages/base64"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/StableLib/stablelib/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "d5b9cf42a4b14ae737222e8c841caca160a0e7c8fdeda523b82499ac64a60f136ab72b488b493cbad51e9c0c1364de15e665d7606b15508f73781ab2fa304e49"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "fast-sha256@1.3.0",
+      "type": "library",
+      "name": "fast-sha256",
+      "version": "1.3.0",
+      "scope": "optional",
+      "author": "Dmitry Chestnykh",
+      "description": "SHA-256, HMAC and PBKDF2 implementation with typed arrays for modern browsers and Node.js",
+      "purl": "pkg:npm/fast-sha256@1.3.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/fast-sha256"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/fast-sha256/-/fast-sha256-1.3.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/dchest/fast-sha256-js.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/dchest/fast-sha256-js#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/dchest/fast-sha256-js/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "9f5d5118ffe5ad610523f6d677280bc6123ea557a8d59608570bef3e45bb6b397facecbe1771d8459d8ae73784f669a4850a69caff6c405c7424cf5469b9e93d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "Unlicense"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "json-schema-to-ts@3.1.1",
+      "type": "library",
+      "name": "json-schema-to-ts",
+      "version": "3.1.1",
+      "scope": "optional",
+      "author": "Thomas Aribart",
+      "description": "Infer typescript types from your JSON schemas!",
+      "purl": "pkg:npm/json-schema-to-ts@3.1.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/json-schema-to-ts"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/json-schema-to-ts/-/json-schema-to-ts-3.1.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/ThomasAribart/json-schema-to-ts.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/ThomasAribart/json-schema-to-ts#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/ThomasAribart/json-schema-to-ts/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "f835a0f230891b64c49e9cbb90e9bfeff031698a1a45b8d50782c564bc926655a7f1ec46b3703838b251f7ae9c56f536e8ded7f535b197e26cc3b77302a293ea"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "standardwebhooks@1.1.1",
+      "type": "library",
+      "name": "standardwebhooks",
+      "version": "1.1.1",
+      "scope": "optional",
+      "author": "Standard Webhooks",
+      "description": "Standard Webhooks for TypeScript",
+      "purl": "pkg:npm/standardwebhooks@1.1.1",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/standardwebhooks"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/standardwebhooks/-/standardwebhooks-1.1.1.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/standard-webhooks/standard-webhooks.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/standard-webhooks/standard-webhooks/tree/main/libraries/javascript"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/standard-webhooks/standard-webhooks/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "6c26d7f5913216458fb11cfb065dcdb90509a219b01927afff286beef85a18f95ce007c8aeca4845ae9c3d306e23522d9ab4c327877f4b6842b1f7b8faf4069d"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    },
+    {
+      "bom-ref": "ts-algebra@2.0.0",
+      "type": "library",
+      "name": "ts-algebra",
+      "version": "2.0.0",
+      "scope": "optional",
+      "author": "Thomas Aribart",
+      "description": "Types on steroids 💊",
+      "purl": "pkg:npm/ts-algebra@2.0.0",
+      "properties": [
+        {
+          "name": "cdx:npm:package:path",
+          "value": "node_modules/ts-algebra"
+        }
+      ],
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://registry.npmjs.org/ts-algebra/-/ts-algebra-2.0.0.tgz"
+        },
+        {
+          "type": "vcs",
+          "url": "git+https://github.com/ThomasAribart/ts-algebra.git"
+        },
+        {
+          "type": "website",
+          "url": "https://github.com/ThomasAribart/ts-algebra#readme"
+        },
+        {
+          "type": "issue-tracker",
+          "url": "https://github.com/ThomasAribart/ts-algebra/issues"
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-512",
+          "content": "14f02134f14cae4c33efa3fb71d8dd9a24a1c0cca765837a4a03ae8c3d6ead8e28366f343aef6831d99b478e4ba2d70a397a32ef04a61e444513a3316eb85e7f"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "ref": "cloc-fusion@1.3.0",
+      "dependsOn": [
+        "@anthropic-ai/sdk@0.134.0"
+      ]
+    },
+    {
+      "ref": "@anthropic-ai/sdk@0.134.0",
+      "dependsOn": [
+        "@opentelemetry/api@1.9.1",
+        "standardwebhooks@1.1.1",
+        "json-schema-to-ts@3.1.1"
+      ]
+    },
+    {
+      "ref": "@babel/runtime@7.29.10",
+      "dependsOn": []
+    },
+    {
+      "ref": "@opentelemetry/api@1.9.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "@stablelib/base64@1.0.1",
+      "dependsOn": []
+    },
+    {
+      "ref": "fast-sha256@1.3.0",
+      "dependsOn": []
+    },
+    {
+      "ref": "json-schema-to-ts@3.1.1",
+      "dependsOn": [
+        "@babel/runtime@7.29.10",
+        "ts-algebra@2.0.0"
+      ]
+    },
+    {
+      "ref": "standardwebhooks@1.1.1",
+      "dependsOn": [
+        "@stablelib/base64@1.0.1",
+        "fast-sha256@1.3.0"
+      ]
+    },
+    {
+      "ref": "ts-algebra@2.0.0",
+      "dependsOn": []
+    }
+  ]
+}
