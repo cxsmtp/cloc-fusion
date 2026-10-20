@@ -137,3 +137,17 @@ test("a download's Accept header wins over the client's default media type", asy
   await api.get('/json').catch(() => {});
   assert.deepEqual(seen, ['application/octet-stream', 'application/vnd.github+json']);
 });
+
+test('a GitHub host that is not a plain host name never reaches the gh command line (Windows shell)', async () => {
+  const { cliBrowserLogin } = await import('../src/auth.js');
+  for (const apiUrl of ['https://ghe.acme.test&calc.exe/api/v3', 'https://a$(id).test/api/v3', 'https://x|y.test/']) {
+    let host;
+    try {
+      host = new URL(apiUrl).host;
+    } catch {
+      continue; // the URL parser already refuses it
+    }
+    if (/^[a-z0-9.-]+(:\d+)?$/i.test(host)) continue;
+    await assert.rejects(cliBrowserLogin('gh', { apiUrl }), /not a valid GitHub host/);
+  }
+});

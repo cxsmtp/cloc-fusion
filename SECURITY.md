@@ -39,16 +39,16 @@ archives, repository contents, and report files fed back in with `--resume` or `
 | It listens on 127.0.0.1 only, never on a network interface. | `src/ui/server.js` |
 | Every request must carry `Host: 127.0.0.1:<port>` or `localhost:<port>`, so a web page on another name that resolves to this machine (DNS rebinding) is refused. | `src/ui/server.js` |
 | Every API call needs a random key made for this run (sent as `x-cf-key`), and bodies must be JSON under 1 MB: other sites can't drive it with forms or cross-site requests, and can't read its answers. | `src/ui/server.js` |
-| The page is served with a strict Content Security Policy (no external resources, no framing, no form posts) and builds its interface without `innerHTML`. | `src/ui/server.js`, `src/ui/page.js` |
+| The page is served with a strict Content Security Policy: its scripts run only by a nonce made for each response, and nothing external, no framing, no form posts. It builds its interface without `innerHTML`, and keys its lookups by connection name in prototype-free maps. The per-run key is compared in constant time. | `src/ui/server.js`, `src/ui/page.js` |
 | Tokens shown to the page are masked; saving the masked copy keeps the real one. Tokens pasted into the page or obtained by device sign-in go to `~/.cloc-fusion/credentials.json`, written atomically and owner-only, never to the settings file or reports. | `src/ui/server.js`, `src/credentials.js` |
-| Browser sign-in uses the platforms' own flows (`gh auth login --web`, `az login`, OAuth device flow), run without a shell on macOS and Linux. The app never sees a password. | `src/auth.js` |
+| Browser sign-in uses the platforms' own flows (`gh auth login --web`, `az login`, OAuth device flow), run without a shell on macOS and Linux. On Windows, where they run through the shell, only a plain host name reaches the command line (a URL host may still contain `&` or `$()`). The app never sees a password. | `src/auth.js` |
 | The report's *Tune the plan* escapes every name typed into it, and its downloaded settings contain no tokens or connections. | `src/report/tune.js` |
 
 ### The standalone page (cloc-fusion.html)
 | Protection | Where |
 |---|---|
 | Tokens live only in the page's memory: never written to browser storage (which pages opened from disk can share), never in exported settings or reports. Closing the page forgets them. | `src/browser/app.js` |
-| A Content Security Policy allows no external scripts, styles, frames or form posts; the page talks only to the platform APIs you configure. | `scripts/build-standalone.mjs` |
+| A Content Security Policy allows no external scripts, styles, frames or form posts, and connections to https servers only. Inline scripts stay allowed because the report the page opens inherits its policy and its scripts are made per scan. Imported settings are taken key by key, each of the expected type. | `scripts/build-standalone.mjs`, `src/browser/app.js` |
 | The same credential rules as the app: the token goes only to the connection's API origin. Archive downloads carry only `Authorization`, which the browser drops when GitHub redirects to its download host. | `src/http.js` |
 | Archives are read in memory with size and decompression limits (1 GB by default); nothing is written to disk. | `src/browser/engine.js` |
 | The interface is built from DOM text nodes; the report it produces is the same escaped report as the CLI's. | `src/browser/app.js`, `src/report/html.js` |
@@ -93,6 +93,7 @@ archives, repository contents, and report files fed back in with `--resume` or `
   CI runs them on Windows, macOS and Linux.
 - The mock API in `bench/` serves archives from a second "download" origin and fails the
   benchmark if that origin ever receives a token.
+- Version 1.3.0 was scanned with Checkmarx One (SAST, SCA, KICS, secret detection): every finding was triaged; the real ones were fixed (command injection on Windows, prototype pollution, Content Security Policies, a weak hash, an unvalidated update-repository override, a timing-unsafe key check), and the rest are by design or in test code, as listed in [CHANGELOG.md](CHANGELOG.md).
 - Version 1.1.0 was reviewed by hand and by an independent audit. Every confirmed finding was
   fixed (see [CHANGELOG.md](CHANGELOG.md#security)). It is also scanned with Checkmarx One
   (SAST, SCA, KICS and secret detection).

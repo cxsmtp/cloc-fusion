@@ -194,7 +194,7 @@ export function commitStats(text, { now = Date.now(), weeks = 52 } = {}) {
  * { headSha, branch, commits, authors, windowDays, weekly, lastCommitAt, loc, files, code, comment, blank, languages, mainLanguage }.
  */
 export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = null, allowHttp = false, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countCategories, locBasis, timeoutMs = 30 * 60000, keep = false, now = Date.now(), onPhase = () => {} }) {
-  const id = createHash('sha1').update(`${repo.connection}/${repo.cloneUrl}`).digest('hex').slice(0, 10);
+  const id = createHash('sha256').update(`${repo.connection}/${repo.cloneUrl}`).digest('hex').slice(0, 10);
   const dir = join(workDir, `${repo.name.replace(/[^\w.-]+/g, '_').slice(0, 40)}-${id}`);
   let url;
   try {

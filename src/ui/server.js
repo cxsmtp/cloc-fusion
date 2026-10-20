@@ -6,7 +6,7 @@
 // itself (no DNS rebinding); every API call must carry a random per-run key that only the page
 // knows (other sites can neither read the page nor send the custom header); bodies are capped.
 import http from 'node:http';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
@@ -72,6 +72,8 @@ export async function startUi({ configFile, outDir, port = 4747, open = true, lo
   configFile = resolve(configFile || 'cloc-fusion.config.json');
   outDir = resolve(outDir || join(dirname(configFile), 'cloc-fusion-output'));
   const key = randomBytes(24).toString('hex');
+  // Compared in constant time, so the key can't be guessed from response timings.
+  const keyOk = (given) => typeof given === 'string' && given.length === key.length && timingSafeEqual(Buffer.from(given), Buffer.from(key));
   let config;
   let configExists = existsSync(configFile);
   try {
@@ -290,18 +292,20 @@ export async function startUi({ configFile, outDir, port = 4747, open = true, lo
       if (!hostsOk(req, actualPort)) return send(403, { error: 'forbidden host' });
       const url = new URL(req.url, `http://${req.headers.host}`);
       if (req.method === 'GET' && url.pathname === '/') {
-        return send(200, uiPage({ key, version: VERSION }), 'text/html; charset=utf-8', { 'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" });
+        // The page's one script runs by a nonce made for this response; no other script can.
+        const nonce = randomBytes(16).toString('base64');
+        return send(200, uiPage({ key, version: VERSION, nonce }), 'text/html; charset=utf-8', { 'Content-Security-Policy': `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; font-src data:; img-src data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'` });
       }
       const reportFile = { '/report': ['cloc-fusion-report.html', 'text/html; charset=utf-8'], '/report.csv': ['cloc-fusion-report.csv', 'text/csv; charset=utf-8'], '/report.json': ['cloc-fusion-report.json', 'application/json'], '/report.md': ['cloc-fusion-report.md', 'text/markdown; charset=utf-8'], '/contributors.csv': ['cloc-fusion-contributors.csv', 'text/csv; charset=utf-8'] }[url.pathname];
       if (req.method === 'GET' && reportFile) {
-        if (url.searchParams.get('k') !== key) return send(403, { error: 'forbidden' });
+        if (!keyOk(url.searchParams.get('k'))) return send(403, { error: 'forbidden' });
         const path = join(outDir, reportFile[0]);
         if (!(await stat(path).catch(() => null))) return send(404, { error: 'no report yet: run a scan' });
         const disposition = reportFile[0].endsWith('.html') ? {} : { 'Content-Disposition': `attachment; filename="${reportFile[0]}"` };
         return send(200, await readFile(path), reportFile[1], disposition);
       }
       if (url.pathname === '/api/events' && req.method === 'GET') {
-        if (url.searchParams.get('k') !== key) return send(403, { error: 'forbidden' });
+        if (!keyOk(url.searchParams.get('k'))) return send(403, { error: 'forbidden' });
         res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive' });
         res.write(': connected\n\n');
         clients.add(res);
@@ -314,7 +318,7 @@ export async function startUi({ configFile, outDir, port = 4747, open = true, lo
       }
       const route = routes[`${req.method} ${url.pathname}`];
       if (!route) return send(404, { error: 'not found' });
-      if (req.headers['x-cf-key'] !== key) return send(403, { error: 'forbidden' });
+      if (!keyOk(req.headers['x-cf-key'])) return send(403, { error: 'forbidden' });
       let body = {};
       if (req.method === 'POST') {
         if (!String(req.headers['content-type'] || '').startsWith('application/json')) return send(415, { error: 'JSON only' });

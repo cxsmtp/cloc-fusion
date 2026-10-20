@@ -3,6 +3,7 @@
 // served through a redirect to a second "codeload" origin (which must never see the token).
 // Optional fault injection: a share of URLs answered 429 (Retry-After: 0) or 502 on their first attempt.
 import http from 'node:http';
+import { randomBytes } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 
 const DAY = 86400000;
@@ -45,7 +46,7 @@ function repoFiles(top, n, lines) {
  * Start the mock. Returns { url, close, stats }. Repository i of organization o is
  * `org{o}/repo{i}`; its size and activity cycle through a few profiles so totals are predictable.
  */
-export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0, latencyMs = 0, token = 'test-token', cors = false, codeloadCors = true } = {}) {
+export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0, latencyMs = 0, token = randomBytes(16).toString('hex'), cors = false, codeloadCors = true } = {}) {
   const PROFILES = [
     { files: 5, lines: 100, commitsPerWeek: 7 },
     { files: 20, lines: 600, commitsPerWeek: 2 },
@@ -94,7 +95,8 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
   };
 
   // A web page (the standalone HTML) calls the API cross-origin, as it does api.github.com.
-  const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, accept, content-type, x-github-api-version', 'access-control-expose-headers': 'link, x-ratelimit-remaining, x-ratelimit-reset' };
+  // Only a page opened from disk (origin "null") may call it, as the standalone page is.
+  const CORS = { 'access-control-allow-origin': 'null', 'access-control-allow-headers': 'authorization, accept, content-type, x-github-api-version', 'access-control-expose-headers': 'link, x-ratelimit-remaining, x-ratelimit-reset' };
   const api = http.createServer(async (req, res) => {
     stats.requests++;
     if (cors) {
@@ -159,7 +161,7 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
   // The download host: like codeload.github.com, a different origin that gets no Authorization.
   const codeload = http.createServer((req, res) => {
     stats.requests++;
-    if (cors && codeloadCors) res.setHeader('access-control-allow-origin', '*');
+    if (cors && codeloadCors) res.setHeader('access-control-allow-origin', 'null');
     if (req.headers.authorization) stats.tokenLeaks++;
     const m = req.url.match(/^\/p(\d)\.tar\.gz/);
     if (!m) {
@@ -176,6 +178,7 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
   api.keepAliveTimeout = codeload.keepAliveTimeout = 60000;
   return {
     url,
+    token, // a random one per run unless given
     stats,
     profiles: PROFILES,
     // Idle keep-alive connections are closed too, at once: Node 18 would otherwise wait for them.

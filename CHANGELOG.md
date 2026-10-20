@@ -37,6 +37,14 @@ The web app, the standalone HTML page, browser sign-in, and choosing your Fusion
 - `cloc-fusion` with no arguments starts the web app; `--help` shows the commands.
 
 ### Security
+- **Checkmarx One scan of this release** (SAST, SCA, KICS, secret detection; 3 critical, 10 high, 11 medium, 15 low), every finding triaged. Fixed:
+  - command injection on Windows: the GitHub host taken from the API address went to `gh` through the Windows shell, and a URL host may contain `&` or `$()`; only a plain host name is accepted now (critical);
+  - prototype pollution: the web app and the standalone page keep per-connection state in prototype-free maps (high);
+  - Content Security Policies: the web app's scripts run by a per-response nonce; the standalone page connects to https servers only (high/medium);
+  - imported settings are taken key by key with type checks (high);
+  - SHA-256 instead of SHA-1 for work-folder names, a validated `CLOC_FUSION_UPDATE_REPO`, and a constant-time key check (medium/low);
+  - the test mock uses a random token and allows only a page opened from disk (critical/high, test code).
+- By design, and documented in SECURITY.md: requests to the API and clone addresses you configure (SSRF), http for servers you configured as http, the `command` token source running your own command through your shell, tokens kept in owner-only files when you choose to store them, and the release download whose SHA-256 is checked before use. The secret-detection hit is a fake `user:token@` URL in the test that proves such URLs are refused.
 - The web app listens on 127.0.0.1 only, checks the `Host` header, needs a per-run key on every call, accepts JSON only, and serves a strict Content Security Policy. See [SECURITY.md](SECURITY.md#the-web-app).
 
 ## [1.2.1] - 2026-10-15

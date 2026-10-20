@@ -76,7 +76,7 @@ test('browser engine measures like the API engine (same lines and commits)', asy
   try {
     const conn = { name: 'gh', provider: 'github', apiUrl: mock.url, auth: { method: 'pat' } };
     const provider = providerOf('github');
-    const api = provider.client(conn, { token: 'test-token' });
+    const api = provider.client(conn, { token: mock.token });
     const repos = await provider.listRepos(api, 'org0');
     for (const repo of repos) {
       const web = await measureRepo(repo, { session: { provider, api }, conn });

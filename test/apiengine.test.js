@@ -13,10 +13,10 @@ import { scan } from '../src/scan.js';
 import { readTarGz } from '../src/archive.js';
 import { ApiClient } from '../src/http.js';
 
-const config = (url, extra = {}) =>
+const config = (mock, extra = {}) =>
   normalizeConfig({
     engine: 'api',
-    connections: [{ name: 'gh', provider: 'github', apiUrl: url, auth: { method: 'pat', token: { value: 'test-token' } }, orgs: 'all' }],
+    connections: [{ name: 'gh', provider: 'github', apiUrl: mock.url, auth: { method: 'pat', token: { value: mock.token } }, orgs: 'all' }],
     fusion: { models: [{ id: 'm', name: 'Fusion', creditsPer10k: 1 }] },
     ...extra,
   });
@@ -28,7 +28,7 @@ test('API engine: LOC from the tarball, commits from the API, no token leak', as
     await mock.close();
     await rm(work, { recursive: true, force: true });
   });
-  const report = await scan(config(mock.url), { workDir: work });
+  const report = await scan(config(mock), { workDir: work });
   assert.equal(report.counts.discovered, 6);
   assert.equal(report.counts.measured, 6);
   assert.equal(report.counts.failed, 0);
@@ -62,7 +62,7 @@ test('API engine survives rate limits and server errors', async (t) => {
     await mock.close();
     await rm(work, { recursive: true, force: true });
   });
-  const cfg = config(mock.url);
+  const cfg = config(mock);
   const report = await scan(cfg, { workDir: work });
   assert.equal(report.counts.measured, 30);
   assert.equal(report.counts.failed, 0);

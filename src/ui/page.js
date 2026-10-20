@@ -210,10 +210,10 @@ function clientApp(boot) {
   let S = null; // server state
   let cfg = null; // the working configuration
   let dirty = false;
-  const status = {}; // connection → { state: 'checking'|'ok'|'bad', who, error, orgs }
-  const open = {}; // connection editors open
-  const optsCache = {}; // provider|apiUrl|org → sign-in options of a connection not saved yet
-  const auth = {}; // connection → live sign-in { status, userCode, verificationUri, error, id }
+  const status = Object.create(null); // connection → { state: 'checking'|'ok'|'bad', who, error, orgs }
+  const open = Object.create(null); // connection editors open
+  const optsCache = Object.create(null); // provider|apiUrl|org → sign-in options of a connection not saved yet
+  const auth = Object.create(null); // connection → live sign-in { status, userCode, verificationUri, error, id }
 
   async function api(path, body) {
     const res = await fetch(path, { method: body === undefined ? 'GET' : 'POST', headers: { 'x-cf-key': boot.key, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -1023,7 +1023,7 @@ function clientApp(boot) {
   })();
 }
 
-export function uiPage({ key, version }) {
+export function uiPage({ key, version, nonce = '' }) {
   return `<!doctype html>
 <html lang="en" data-theme="dark" data-accent="indigo">
 <head>
@@ -1031,7 +1031,7 @@ export function uiPage({ key, version }) {
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark light">
 <title>cloc-fusion · Fusion planner</title>
-<script>try{var d=document.documentElement,t=localStorage.getItem('cf-theme'),a=localStorage.getItem('cf-accent');if(t==='auto')d.removeAttribute('data-theme');else if(t==='light')d.setAttribute('data-theme','light');if(/^(indigo|cyan|emerald|violet|amber)$/.test(a||''))d.setAttribute('data-accent',a)}catch(e){}</script>
+<script${nonce ? ` nonce="${String(nonce).replace(/[^\w+/=]/g, '')}"` : ''}>try{var d=document.documentElement,t=localStorage.getItem('cf-theme'),a=localStorage.getItem('cf-accent');if(t==='auto')d.removeAttribute('data-theme');else if(t==='light')d.setAttribute('data-theme','light');if(/^(indigo|cyan|emerald|violet|amber)$/.test(a||''))d.setAttribute('data-accent',a)}catch(e){}</script>
 <style>${NEXTGEN_CSS}${UI_CSS}</style>
 </head>
 <body>
@@ -1067,7 +1067,7 @@ export function uiPage({ key, version }) {
 <footer><span id="out"></span><span>Runs on this computer only · nothing leaves it except calls to your Git platforms</span></footer>
 </main>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script>(${clientApp.toString()})(${JSON.stringify({ key, version }).replace(/</g, '\\u003c')});</script>
+<script${nonce ? ` nonce="${String(nonce).replace(/[^\w+/=]/g, '')}"` : ''}>(${clientApp.toString()})(${JSON.stringify({ key, version }).replace(/</g, '\\u003c')});</script>
 </body>
 </html>`;
 }

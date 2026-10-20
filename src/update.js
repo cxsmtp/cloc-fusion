@@ -11,7 +11,9 @@ import { ApiClient } from './http.js';
 import { VERSION, buildInfo, compareVersions } from './version.js';
 
 const run = promisify(execFile);
-export const UPDATE_REPO = process.env.CLOC_FUSION_UPDATE_REPO || 'cxsmtp/cloc-fusion';
+// Overridable for forks; only an owner/name pair is accepted.
+const repoOverride = process.env.CLOC_FUSION_UPDATE_REPO;
+export const UPDATE_REPO = repoOverride && /^[\w.-]{1,100}\/[\w.-]{1,100}$/.test(repoOverride) ? repoOverride : 'cxsmtp/cloc-fusion';
 const DAY = 86400000;
 
 /** This platform's executable name in a release, as scripts/build-binary.mjs names it. */

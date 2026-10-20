@@ -80,6 +80,9 @@ export function cliBrowserLogin(kind, conn, { onCode, onLine, signal } = {}) {
       const h = new URL(conn.apiUrl || 'https://api.github.com').host;
       host = h === 'api.github.com' ? 'github.com' : h;
     } catch {}
+    // Only a plain host name (and port) reaches the command line: on Windows it goes through the
+    // shell, where characters a URL host may still hold (such as &) would start another command.
+    if (!/^[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?(:\d{1,5})?$/i.test(host)) return Promise.reject(new Error(`not a valid GitHub host: ${host.slice(0, 80)}`));
     cmd = 'gh';
     args = ['auth', 'login', '--web', '--hostname', host, '--git-protocol', 'https', '--skip-ssh-key', '--scopes', 'repo,read:org'];
   } else {

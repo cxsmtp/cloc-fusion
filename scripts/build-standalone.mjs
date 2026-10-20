@@ -18,7 +18,13 @@ rmSync(out);
 // The script is inline: nothing in it may close the <script> element or open an HTML comment.
 js = js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
 
-const CSP = ["default-src 'none'", "script-src 'unsafe-inline'", "style-src 'unsafe-inline'", 'font-src data:', 'img-src data:', 'connect-src https: http:', "base-uri 'none'", "form-action 'none'"].join('; ');
+// No external scripts, styles, frames or form posts, and connections to https servers only.
+// Inline scripts stay allowed: the full report the page opens (a blob: document) inherits this
+// policy, and its scripts are made per scan, so they can't be listed by hash. The page itself
+// builds its interface from DOM text nodes, never from HTML strings.
+// STANDALONE_ALLOW_HTTP=1 builds a copy that also allows http, for tests against a local mock.
+const connect = process.env.STANDALONE_ALLOW_HTTP ? 'connect-src https: http:' : 'connect-src https:';
+const CSP = ["default-src 'none'", "script-src 'unsafe-inline'", "style-src 'unsafe-inline'", 'font-src data:', 'img-src data:', connect, "base-uri 'none'", "form-action 'none'"].join('; ');
 const page = `<!doctype html>
 <html lang="en" data-theme="dark" data-accent="indigo">
 <head>

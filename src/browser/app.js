@@ -128,10 +128,10 @@ function startingSettings() {
   return base;
 }
 let cfg = startingSettings();
-const secrets = {}; // connection name → { token, username }, in memory only
-const sessions = {}; // connection name → { provider, api, who }
-const status = {}; // connection name → { state: 'checking'|'ok'|'bad', who, error, orgs }
-const open = {};
+const secrets = Object.create(null); // connection name → { token, username }, in memory only
+const sessions = Object.create(null); // connection name → { provider, api, who }
+const status = Object.create(null); // connection name → { state: 'checking'|'ok'|'bad', who, error, orgs }
+const open = Object.create(null);
 let job = null; // { running, done, total, log, abort, current }
 let report = null; // the last report
 function save() {
@@ -665,10 +665,21 @@ async function importSettings(file) {
     const data = JSON.parse(await file.text());
     if (!data || typeof data !== 'object') throw new Error('not a settings file');
     const src = data.tool === 'cloc-fusion' && data.settings ? data.settings : data; // a report's settings work too
-    if (src.fusion && typeof src.fusion === 'object') cfg.fusion = { ...cfg.fusion, ...src.fusion };
-    if (src.totals && typeof src.totals === 'object') cfg.totals = { ...cfg.totals, ...src.totals };
-    if (src.overrides && typeof src.overrides === 'object') cfg.overrides = { ...(cfg.overrides || {}), ...src.overrides };
-    for (const k of ['windowDays', 'includeArchived', 'includeForks', 'includeMerges', 'locBasis', 'countCategories', 'exclude', 'include', 'maxFileBytes']) if (src[k] !== undefined) cfg[k] = src[k];
+    // Only known settings, each of the expected type, are taken from the file.
+    const obj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+    const plain = (o) => Object.fromEntries(Object.entries(o).filter(([k]) => k !== '__proto__' && k !== 'constructor' && k !== 'prototype'));
+    if (obj(src.fusion)) {
+      const f = plain(src.fusion);
+      if (f.models !== undefined && !Array.isArray(f.models)) delete f.models;
+      if (Array.isArray(f.models)) f.models = f.models.filter(obj).slice(0, 20).map((m, i) => ({ id: String(m.id ?? `model-${i + 1}`).slice(0, 60), name: String(m.name ?? '').slice(0, 80), creditsPer10k: Number.isFinite(Number(m.creditsPer10k)) && m.creditsPer10k !== null && m.creditsPer10k !== '' ? Number(m.creditsPer10k) : null }));
+      for (const k of ['byFrequency', 'byCriticality']) if (f[k] !== undefined && !obj(f[k])) delete f[k];
+      cfg.fusion = { ...cfg.fusion, ...f };
+    }
+    if (obj(src.totals)) for (const k of ['extraPercent', 'bundleCredits']) if (Number.isFinite(Number(src.totals[k]))) cfg.totals[k] = Number(src.totals[k]);
+    if (obj(src.overrides)) cfg.overrides = { ...(cfg.overrides || {}), ...Object.fromEntries(Object.entries(plain(src.overrides)).filter(([, v]) => obj(v))) };
+    const types = { windowDays: 'number', includeArchived: 'boolean', includeForks: 'boolean', includeMerges: 'boolean', locBasis: 'string', maxFileBytes: 'number' };
+    for (const [k, t] of Object.entries(types)) if (typeof src[k] === t) cfg[k] = src[k];
+    for (const k of ['countCategories', 'exclude', 'include', 'bots']) if (Array.isArray(src[k])) cfg[k] = src[k].map(String).slice(0, 200);
     if (Array.isArray(src.connections)) {
       for (const c of src.connections) {
         if (!c || !SUPPORTED.includes(c.provider) || !c.name || cfg.connections.some((x) => x.name === c.name)) continue;

@@ -62,7 +62,7 @@ async function apiScenario() {
     const cfg = normalizeConfig({
       engine: 'api',
       concurrency: CONC,
-      connections: [{ name: 'mock', provider: 'github', apiUrl: mock.url, auth: { method: 'pat', token: { value: 'test-token' } }, orgs: 'all' }],
+      connections: [{ name: 'mock', provider: 'github', apiUrl: mock.url, auth: { method: 'pat', token: { value: mock.token } }, orgs: 'all' }],
       fusion: { models: [{ id: 'm', name: 'Fusion', creditsPer10k: 1 }] },
     });
     return await timed(`api engine, ${N.toLocaleString()} repos`, async () => {
