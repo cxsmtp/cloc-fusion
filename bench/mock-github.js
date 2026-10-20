@@ -69,7 +69,12 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
     const weeks = 52;
     for (let w = 0; w < weeks; w++) for (let k = 0; k < p.commitsPerWeek; k++) {
       const t = now - w * 7 * DAY - (k + 1) * 3600000;
-      if (t >= sinceT) out.push({ sha: `${w}-${k}`, commit: { author: { email: `dev${k % 3}@acme.test`, date: new Date(t).toISOString() }, committer: { date: new Date(t).toISOString() } }, parents: [{}] });
+      if (t >= sinceT) out.push({ sha: `${w}-${k}`, commit: { author: { email: `dev${k % 3}@acme.test`, name: `Developer ${k % 3}`, date: new Date(t).toISOString() }, committer: { date: new Date(t).toISOString() } }, parents: [{}] });
+    }
+    // A dependency bot on the busy repositories, as on real ones.
+    if (p.commitsPerWeek > 0) {
+      const t = now - 5 * DAY;
+      if (t >= sinceT) out.push({ sha: 'bot', commit: { author: { email: '49699333+dependabot[bot]@users.noreply.github.com', name: 'dependabot[bot]', date: new Date(t).toISOString() }, committer: { date: new Date(t).toISOString() } }, parents: [{}] });
     }
     return out;
   };

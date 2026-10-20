@@ -1,6 +1,6 @@
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { toCsv } from './csv.js';
+import { toCsv, toContributorsCsv } from './csv.js';
 import { toHtml } from './html.js';
 import { toMarkdown, consoleSummary } from './text.js';
 
@@ -19,7 +19,14 @@ export async function writeReports(report, outDir, formats = FORMATS, base = 'cl
   };
   for (const f of formats) {
     if (f === 'json') await put('json', JSON.stringify(report, null, 2));
-    else if (f === 'csv') await put('csv', toCsv(report));
+    else if (f === 'csv') {
+      await put('csv', toCsv(report));
+      if (report.contributors) {
+        const p = join(outDir, `${base.replace(/-report$/, '')}-contributors.csv`);
+        await writeFile(p, toContributorsCsv(report));
+        written.push(p);
+      }
+    }
     else if (f === 'html') await put('html', toHtml(report));
     else if (f === 'md') await put('md', toMarkdown(report));
     else throw new Error(`unknown format "${f}" (expected ${FORMATS.join(', ')})`);

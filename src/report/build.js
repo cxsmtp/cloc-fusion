@@ -3,7 +3,7 @@
 import { VERSION } from '../version.js';
 import { frequencyOf, frequencyLabel, fusionEstimate, creditSummary } from '../fusion.js';
 import { globToRegExp } from '../languages.js';
-import { DEV_WINDOW_DAYS } from '../commits.js';
+import { DEV_WINDOW_DAYS, contributorKey, isBot } from '../commits.js';
 
 /** The configuration as it may appear in reports: no secrets, only what identifies a connection. */
 export function redactConfig(cfg) {
@@ -60,23 +60,40 @@ export function buildReport(cfg, repos, problems = [], { started = Date.now(), p
       l.blank += t.blank;
     }
   }
-  // Contributing developers in the last 90 days: each repository's, and unique across the estate
-  // and per organization (the same person in several repositories counts once).
-  const everyone = new Set();
+  // Contributors in the last 90 days, from the commit history: people and bots, each with the
+  // repositories they committed to. A person in several repositories counts once (by email).
+  const extraBots = (Array.isArray(cfg.bots) ? cfg.bots : []).map((g) => globToRegExp(String(g).toLowerCase()));
+  const botty = (c) => isBot(c.email, c.name) || extraBots.some((re) => re.test(String(c.email || '').toLowerCase()) || re.test(String(c.name || '').toLowerCase()));
+  const people = new Map();
   const byOrgDevs = new Map();
   let devData = 0;
   for (const r of measured) {
-    if (!Array.isArray(r.devIds90)) continue;
+    if (!Array.isArray(r.contributors90)) continue;
     devData++;
     const k = `${r.connection}\u0000${r.org}`;
     if (!byOrgDevs.has(k)) byOrgDevs.set(k, new Set());
-    for (const id of r.devIds90) {
-      everyone.add(id);
-      byOrgDevs.get(k).add(id);
+    let devs = 0;
+    r.contributors90 = r.contributors90.map((c) => ({ ...c, bot: botty(c) }));
+    for (const c of r.contributors90) {
+      const bot = c.bot;
+      if (!bot) devs++;
+      const key = contributorKey(c);
+      if (!key) continue;
+      if (!bot) byOrgDevs.get(k).add(key);
+      const p = people.get(key) || { name: c.name, email: c.email, bot, commits: 0, lastCommitAt: null, repos: [] };
+      p.commits += c.commits || 0;
+      p.bot = p.bot || bot;
+      if (!p.lastCommitAt || (c.lastCommitAt && c.lastCommitAt > p.lastCommitAt)) Object.assign(p, { lastCommitAt: c.lastCommitAt, name: c.name || p.name });
+      p.repos.push(r.fullName);
+      people.set(key, p);
     }
+    r.devs90 = devs;
+    r.bots90 = r.contributors90.length - devs;
   }
+  const contributors = [...people.values()].sort((a, b) => a.bot - b.bot || b.repos.length - a.repos.length || b.commits - a.commits || String(a.email).localeCompare(String(b.email)));
   const byOrg = estimate.byOrg.map((o) => ({ ...o, devs90: byOrgDevs.get(`${o.connection}\u0000${o.org}`)?.size ?? 0 }));
-  const developers = { windowDays: DEV_WINDOW_DAYS, coveredDays: Math.min(DEV_WINDOW_DAYS, Number(cfg.windowDays) || 365), total: everyone.size, repos: devData };
+  const bots = contributors.filter((c) => c.bot).length;
+  const developers = { windowDays: DEV_WINDOW_DAYS, coveredDays: Math.min(DEV_WINDOW_DAYS, Number(cfg.windowDays) || 365), total: contributors.length - bots, bots, repos: devData };
   return {
     tool: 'cloc-fusion',
     version: VERSION,
@@ -100,6 +117,7 @@ export function buildReport(cfg, repos, problems = [], { started = Date.now(), p
     byModel: estimate.byModel,
     byOrg,
     developers,
+    contributors,
     languages,
     problems,
     repos: estimate.rows,

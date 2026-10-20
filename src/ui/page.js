@@ -821,6 +821,7 @@ function clientApp(boot) {
         { class: 'row', style: 'margin-top:16px' },
         h('a', { class: 'btn primary', href: `/report?k=${boot.key}`, target: '_blank', rel: 'noopener' }, icon('report'), 'Open the full report'),
         h('a', { class: 'btn sm', href: `/report.csv?k=${boot.key}` }, icon('download'), 'CSV'),
+        h('a', { class: 'btn sm', href: `/contributors.csv?k=${boot.key}` }, 'Contributors'),
         h('a', { class: 'btn sm', href: `/report.json?k=${boot.key}` }, 'JSON'),
         h('a', { class: 'btn sm', href: `/report.md?k=${boot.key}` }, 'Markdown'),
       ),

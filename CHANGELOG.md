@@ -9,7 +9,11 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 The web app, the standalone HTML page, browser sign-in, and choosing your Fusion models.
 
 ### Added
-- **Contributing developers in the last 90 days.** Each repository's distinct commit authors in the last 90 days, and the unique total across the estate and per organization (someone who works in several repositories counts once). Emails are matched case-insensitively, automation accounts (dependabot, renovate, github-actions and other `[bot]` accounts) are left out, and reports keep only one-way ids, never emails. Shown in the HTML report (a headline tile, the summary, the organization table and a repository column), CSV, Markdown, the console summary, the web app and the standalone page; the same from the git engine, the API engine and the browser.
+- **Contributors in the last 90 days, from the commit history.** Every person and bot who committed to a default branch in the last 90 days, with the repositories they contributed to:
+  - each person once, by email (case-insensitive), with their name, commits and last commit; the developer count is unique across the estate and per organization;
+  - bots (dependabot, renovate, github-actions, any `[bot]` account, plus any you name in `"bots": ["svc-*"]`) are listed as bots and not counted as developers;
+  - in the HTML report (a headline tile, the summary, organization and repository columns, and a searchable *Contributors* section with a Developers/Bots filter), a `cloc-fusion-contributors.csv` next to the reports, the JSON, the Markdown summary, the console summary, the web app and the standalone page;
+  - the same from the git engine (`git log`), the API engine and the browser.
 - **The standalone page: `cloc-fusion.html`.** The whole tool in one HTML file that opens straight from disk, with no install, no Node.js and no hosting. Connections (GitHub, GitLab, Azure DevOps, Bitbucket Cloud and Data Center), Fusion pricing with models per frequency and criticality, scan settings and repository rules, the scan with live progress, and the full report (HTML, CSV, JSON), all in the page and on the same engine as the CLI.
   - Signs in with a token per connection (*Create a token* opens the platform's page with the scopes ticked); tokens stay in the page's memory only.
   - GitLab, Azure DevOps and Bitbucket are counted exactly. GitHub is exact when it lets the page download archives; otherwise lines are estimated from its language statistics and marked ≈ in the report.

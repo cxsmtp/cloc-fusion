@@ -21,7 +21,7 @@ export function consoleSummary(report, { top = 15 } = {}) {
   out.push(`Repositories: ${num(k.discovered)} found, ${num(k.measured)} measured, ${num(k.skipped)} skipped, ${num(k.failed)} failed`);
   out.push(`Lines of code: ${num(t.lines)} in ${num(t.repos)} repositories (${num(t.units)} × 10K units)`);
   out.push(`Commits in the window: ${num(t.commits)}`);
-  if (report.developers) out.push(`Contributing developers, last 90 days: ${num(report.developers.total)} (unique, bots excluded)`);
+  if (report.developers) out.push(`Contributing developers, last 90 days: ${num(report.developers.total)} unique (plus ${num(report.developers.bots || 0)} bots, listed separately)`);
   out.push(`Suggested Fusion scans over ${report.settings.fusion.periodMonths} months: ${num(t.scans)} (${num(t.unitScans)} 10K-unit scans)`);
   out.push(creditsLine(report));
   out.push('');
@@ -56,7 +56,7 @@ export function toMarkdown(report) {
   L.push(`| Repositories found / measured | ${num(k.discovered)} / ${num(k.measured)} (${num(k.skipped)} skipped, ${num(k.failed)} failed) |`);
   L.push(`| Lines of code | ${num(t.lines)} (${num(t.units)} × 10K units) |`);
   L.push(`| Commits in window | ${num(t.commits)} |`);
-  if (report.developers) L.push(`| Contributing developers (90 days) | ${num(report.developers.total)} |`);
+  if (report.developers) L.push(`| Contributing developers (90 days) | ${num(report.developers.total)} |`, `| Bots (90 days) | ${num(report.developers.bots || 0)} |`);
   L.push(`| Suggested Fusion scans | ${num(t.scans)} (${num(t.unitScans)} 10K-unit scans) |`);
   L.push(`| ${report.credits.known ? 'Fusion credits' : 'Fusion credits (not priced)'} | ${report.credits.known ? `${num(report.credits.total, 1)} → ${num(report.credits.bundles)} bundle(s)` : 'set credits per 10K LOC'} |`, '');
   L.push('## By change frequency', '');
@@ -73,6 +73,13 @@ export function toMarkdown(report) {
   if (report.problems?.length) {
     L.push('', '## Problems', '');
     for (const p of report.problems) L.push(`- ${md(p.connection)}${p.org ? ` / ${md(p.org)}` : ''}: ${md(p.error)}`);
+  }
+  if (report.contributors?.length) {
+    const shown = report.contributors.slice(0, 200);
+    L.push('', `## Contributors, last 90 days (${num(report.developers.total)} developers, ${num(report.developers.bots || 0)} bots)`, '');
+    L.push('| Name | Email | Type | Repositories | Commits | Contributed to |', '|---|---|---|--:|--:|---|');
+    for (const c of shown) L.push(`| ${md(c.name)} | ${md(c.email)} | ${c.bot ? 'Bot' : 'Developer'} | ${num(c.repos.length)} | ${num(c.commits)} | ${md(c.repos.slice(0, 5).join(', '))}${c.repos.length > 5 ? ` +${c.repos.length - 5} more` : ''} |`);
+    if (report.contributors.length > shown.length) L.push('', `…and ${num(report.contributors.length - shown.length)} more: see cloc-fusion-contributors.csv.`);
   }
   return L.join('\n') + '\n';
 }

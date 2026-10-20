@@ -70,7 +70,7 @@ export default {
   async commits(api, repo, since) {
     const base = `/projects/${encodeURIComponent(repo.id)}/repository/commits?ref_name=${encodeURIComponent(repo.defaultBranch)}`;
     const list = await api.paginate(`${base}&since=${encodeURIComponent(since)}&per_page=100`);
-    const out = list.map((c) => ({ t: Date.parse(c.committed_date || c.created_at), email: c.author_email || '', merge: (c.parent_ids?.length || 0) > 1 }));
+    const out = list.map((c) => ({ t: Date.parse(c.committed_date || c.created_at), email: c.author_email || '', name: c.author_name || '', merge: (c.parent_ids?.length || 0) > 1 }));
     if (!out.length) {
       const last = await api.get(`${base}&per_page=1`, { allow404: true });
       return { commits: out, lastCommitAt: Array.isArray(last) && last[0] ? last[0].committed_date : null };

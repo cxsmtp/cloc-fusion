@@ -133,7 +133,7 @@ export default {
           older = true;
           break;
         }
-        out.push({ t, email: (c.author?.raw?.match(/<([^>]+)>/) || [])[1] || c.author?.user?.uuid || '', merge: (c.parents?.length || 0) > 1 });
+        out.push({ t, email: (c.author?.raw?.match(/<([^>]+)>/) || [])[1] || c.author?.user?.uuid || '', name: c.author?.user?.display_name || String(c.author?.raw || '').replace(/<[^>]*>/, '').trim(), merge: (c.parents?.length || 0) > 1 });
       }
       url = older ? null : page?.next || null;
     }

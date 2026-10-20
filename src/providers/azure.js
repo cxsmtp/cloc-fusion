@@ -125,7 +125,7 @@ export default {
       const page = await api.get(`${base}&searchCriteria.fromDate=${encodeURIComponent(since)}&searchCriteria.%24top=1000&searchCriteria.%24skip=${skip}`);
       const items = page?.value || [];
       // The list has no parents; Azure DevOps names pull request merges "Merged PR …".
-      for (const c of items) out.push({ t: Date.parse(c.committer?.date || c.author?.date), email: c.author?.email || '', merge: /^Merged PR \d+/.test(c.comment || '') });
+      for (const c of items) out.push({ t: Date.parse(c.committer?.date || c.author?.date), email: c.author?.email || '', name: c.author?.name || '', merge: /^Merged PR \d+/.test(c.comment || '') });
       if (items.length < 1000) break;
     }
     if (!out.length) {

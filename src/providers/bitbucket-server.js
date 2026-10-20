@@ -95,7 +95,7 @@ export default {
           older = true;
           break;
         }
-        out.push({ t, email: c.author?.emailAddress || c.author?.name || '', merge: (c.parents?.length || 0) > 1 });
+        out.push({ t, email: c.author?.emailAddress || c.author?.name || '', name: c.author?.displayName || c.author?.name || '', merge: (c.parents?.length || 0) > 1 });
       }
       if (older || !page || page.isLastPage !== false || !(page.nextPageStart > start)) break;
       start = page.nextPageStart;

@@ -292,12 +292,12 @@ export async function startUi({ configFile, outDir, port = 4747, open = true, lo
       if (req.method === 'GET' && url.pathname === '/') {
         return send(200, uiPage({ key, version: VERSION }), 'text/html; charset=utf-8', { 'Content-Security-Policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" });
       }
-      const reportFile = { '/report': ['html', 'text/html; charset=utf-8'], '/report.csv': ['csv', 'text/csv; charset=utf-8'], '/report.json': ['json', 'application/json'], '/report.md': ['md', 'text/markdown; charset=utf-8'] }[url.pathname];
+      const reportFile = { '/report': ['cloc-fusion-report.html', 'text/html; charset=utf-8'], '/report.csv': ['cloc-fusion-report.csv', 'text/csv; charset=utf-8'], '/report.json': ['cloc-fusion-report.json', 'application/json'], '/report.md': ['cloc-fusion-report.md', 'text/markdown; charset=utf-8'], '/contributors.csv': ['cloc-fusion-contributors.csv', 'text/csv; charset=utf-8'] }[url.pathname];
       if (req.method === 'GET' && reportFile) {
         if (url.searchParams.get('k') !== key) return send(403, { error: 'forbidden' });
-        const path = join(outDir, `cloc-fusion-report.${reportFile[0]}`);
+        const path = join(outDir, reportFile[0]);
         if (!(await stat(path).catch(() => null))) return send(404, { error: 'no report yet: run a scan' });
-        const disposition = reportFile[0] === 'html' ? {} : { 'Content-Disposition': `attachment; filename="cloc-fusion-report.${reportFile[0]}"` };
+        const disposition = reportFile[0].endsWith('.html') ? {} : { 'Content-Disposition': `attachment; filename="${reportFile[0]}"` };
         return send(200, await readFile(path), reportFile[1], disposition);
       }
       if (url.pathname === '/api/events' && req.method === 'GET') {

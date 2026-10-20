@@ -30,6 +30,7 @@ archives, repository contents, and report files fed back in with `--resume` or `
 | Credentials are never sent over plain http unless you configured an http server yourself. | `src/git.js` |
 | Clone URLs with embedded credentials (`https://user:token@…`) are rejected at load time, so they can't reach reports or process lists. | `src/config.js` |
 | Reports and checkpoints carry no secrets: settings are written through `redactConfig`, and error messages never include URLs with credentials. | `src/config.js`, `src/scan.js` |
+| Reports list the contributors of the last 90 days (names and emails from the commit history) so they can be counted and reviewed. Treat reports as internal documents; they contain no tokens. | `src/report/build.js` |
 | The built-in sign-in helpers (`gh auth token`, `az account get-access-token`) run without a shell. | `src/config.js` |
 
 ### The web app

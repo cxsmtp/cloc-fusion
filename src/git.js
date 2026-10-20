@@ -9,7 +9,7 @@ import { rm, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { selectFiles, LocTally } from './loc.js';
-import { developersOf } from './commits.js';
+import { contributorsOf } from './commits.js';
 
 const DAY = 86400000;
 
@@ -167,7 +167,7 @@ export function parseLsTree(buf) {
   return out;
 }
 
-/** Commit stats from `git log --format=%ct%x09%ae` lines. */
+/** Commit stats from `git log --format=%ct%x09%ae%x09%an` lines (time, author email, author name). */
 export function commitStats(text, { now = Date.now(), weeks = 52 } = {}) {
   const series = new Array(weeks).fill(0);
   const authors = new Set();
@@ -176,17 +176,17 @@ export function commitStats(text, { now = Date.now(), weeks = 52 } = {}) {
   let last = null;
   for (const line of text.split('\n')) {
     if (!line) continue;
-    const [ts, email] = line.split('\t');
+    const [ts, email, name = ''] = line.split('\t');
     const t = Number(ts) * 1000;
     if (!Number.isFinite(t)) continue;
     commits++;
-    counted.push({ t, email });
+    counted.push({ t, email, name });
     if (email) authors.add(email.toLowerCase());
     if (last === null || t > last) last = t;
     const w = Math.floor((now - t) / (7 * DAY));
     if (w >= 0 && w < weeks) series[weeks - 1 - w]++;
   }
-  return { commits, authors: authors.size, lastCommitAt: last ? new Date(last).toISOString() : null, weekly: series, ...developersOf(counted, now) };
+  return { commits, authors: authors.size, lastCommitAt: last ? new Date(last).toISOString() : null, weekly: series, ...contributorsOf(counted, now) };
 }
 
 /**
@@ -227,12 +227,12 @@ export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = nu
     try {
       headSha = (await git(['rev-parse', 'HEAD'], { cwd: dir, env })).stdout.toString().trim();
     } catch {
-      return { empty: true, commits: 0, authors: 0, devs90: 0, devIds90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
+      return { empty: true, commits: 0, authors: 0, devs90: 0, bots90: 0, contributors90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
     }
     const headBranch = (await git(['symbolic-ref', '--short', 'HEAD'], { cwd: dir, env }).catch(() => ({ stdout: Buffer.from(repo.defaultBranch || '') }))).stdout.toString().trim();
 
     onPhase('history');
-    const logArgs = ['log', '--format=%ct%x09%ae', `--since=${since}`];
+    const logArgs = ['log', '--format=%ct%x09%ae%x09%an', `--since=${since}`];
     if (!includeMerges) logArgs.push('--no-merges');
     const log = await git([...logArgs, 'HEAD'], { cwd: dir, env });
     const stats = commitStats(log.stdout.toString(), { now });
@@ -271,7 +271,8 @@ export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = nu
       commits: stats.commits,
       authors: stats.authors,
       devs90: stats.devs90,
-      devIds90: stats.devIds90,
+      bots90: stats.bots90,
+      contributors90: stats.contributors90,
       weekly: stats.weekly,
       lastCommitAt: stats.lastCommitAt,
       windowDays: Math.round(effectiveWindow * 10) / 10,

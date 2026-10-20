@@ -105,7 +105,8 @@ test('scan measures local repositories and prices Fusion', async (t) => {
 
   const out = join(root, 'out');
   const written = await writeReports(report, out);
-  assert.equal(written.length, 4);
+  assert.equal(written.length, 5);
+  assert.ok(written.some((p) => p.endsWith('cloc-fusion-contributors.csv')));
   const html = await readFile(join(out, 'cloc-fusion-report.html'), 'utf8');
   assert.match(html, /Fusion Readiness Report/);
   assert.match(html, /sized and ready for Fusion/);

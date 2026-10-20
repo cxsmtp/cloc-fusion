@@ -39,6 +39,7 @@ export const DEFAULTS = Object.freeze({
   },
   totals: { extraPercent: 0, bundleCredits: 10000 },
   overrides: {},
+  bots: [], // extra commit authors to list as bots, e.g. ["svc-*", "*jenkins*"] (email or name)
 });
 
 export async function loadConfig(file) {
@@ -63,6 +64,7 @@ export function normalizeConfig(cfg = {}) {
   out.fusion = { ...DEFAULTS.fusion, ...(cfg.fusion || {}) };
   out.totals = { ...DEFAULTS.totals, ...(cfg.totals || {}) };
   out.overrides = cfg.overrides || {};
+  out.bots = Array.isArray(cfg.bots) ? cfg.bots.map(String).filter(Boolean).slice(0, 200) : [];
   out.connections = (cfg.connections || []).map((c, i) => {
     if (!c.provider) throw new Error(`connection #${i + 1} has no "provider"`);
     providerOf(c.provider);

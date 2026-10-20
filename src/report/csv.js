@@ -44,3 +44,11 @@ export function toCsv(report) {
   for (const r of report.repos) lines.push(CSV_COLUMNS.map(([, f]) => cell(f(r, report))).join(','));
   return '﻿' + lines.join('\r\n') + '\r\n';
 }
+
+/** Everyone who committed in the last 90 days (people, then bots), with their repositories. */
+export function toContributorsCsv(report) {
+  const head = ['Name', 'Email', 'Type', 'Repositories', 'Commits (90 days)', 'Last commit', 'Repository list'];
+  const lines = [head.map(cell).join(',')];
+  for (const c of report.contributors || []) lines.push([c.name, c.email, c.bot ? 'Bot' : 'Developer', c.repos.length, c.commits, c.lastCommitAt, c.repos.join('; ')].map(cell).join(','));
+  return '\ufeff' + lines.join('\r\n') + '\r\n';
+}

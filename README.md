@@ -39,7 +39,7 @@ This example is priced at 2 credits per 10K LOC; you set your own rate.
 | web-portal | 61,200 | 2.1 | 1 to 5 a week | 26 | 364 |
 | legacy-batch | 23,900 | 0 | Not in the window | 1 | 6 |
 
-The report also shows totals, the number of credit bundles you need, and the **contributing developers in the last 90 days**: per repository, per organization and unique across the estate (bots excluded, each person counted once). It breaks the estate down by change frequency, organization, Fusion model and language, and includes a 52-week activity sparkline per repository.
+The report also shows totals, the number of credit bundles you need, and the **contributing developers in the last 90 days**: per repository, per organization and unique across the estate, with the full list of people and bots and the repositories each contributed to. It breaks the estate down by change frequency, organization, Fusion model and language, and includes a 52-week activity sparkline per repository.
 
 ---
 
@@ -175,7 +175,7 @@ Neither engine writes a working tree, and clones are deleted as soon as a reposi
 
 **Commits** means non-merge commits on the default branch within the window (365 days by default), plus active authors and the last commit date. A repository younger than the window uses its own age.
 
-**Contributing developers (90 days)** are the distinct authors of those commits in the last 90 days. Email addresses are compared case-insensitively; automation accounts (dependabot, renovate, github-actions, any `[bot]`) are left out. The estate total and the per-organization totals count each person once, however many repositories they work in. Reports store one-way ids for this, never email addresses. Someone who commits under two email addresses counts twice.
+**Contributors (90 days)** come from the commit history: everyone who committed to the default branch in the last 90 days, with their name, email, commits and the repositories they contributed to. Each person is listed once by email (case-insensitive) and counted once across the estate and per organization. Bots (dependabot, renovate, github-actions, any `[bot]` account, and any you name with `"bots": ["svc-*", "*jenkins*"]` in the configuration) are listed as bots and not counted as developers. The list is in the report's *Contributors* section and in `cloc-fusion-contributors.csv`. Someone who commits under two email addresses is listed twice.
 
 ### Reports
 
@@ -211,6 +211,7 @@ Reports are written to `cloc-fusion-output/`:
 | `fusion` | | `periodMonths`, `models[] {id, name, creditsPer10k}`, `byFrequency`, `byCriticality`, `combine` |
 | `totals` | 0% / 10,000 | `extraPercent`, `bundleCredits` |
 | `overrides` | | `{"<repo or glob>": {criticality, scans, model, loc, exclude}}` |
+| `bots` | [] | Extra commit authors to list as bots (email or name globs), e.g. `["svc-*", "*jenkins*"]` |
 
 ### Scale and performance
 

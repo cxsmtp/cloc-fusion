@@ -38,8 +38,11 @@ test('API engine: LOC from the tarball, commits from the API, no token leak', as
   assert.equal(busy.loc, 500);
   assert.equal(busy.languages.JavaScript.comment, 5);
   assert.equal(busy.byCategory.docs.code, 1, 'README counted as docs; node_modules skipped');
-  assert.equal(busy.commits, 7 * 52);
-  assert.equal(busy.authors, 3);
+  assert.equal(busy.commits, 7 * 52 + 1); // and one dependabot commit
+  assert.equal(busy.authors, 4);
+  assert.equal(busy.devs90, 3, 'three people in the last 90 days');
+  assert.equal(busy.bots90, 1, 'dependabot, listed as a bot');
+  assert.deepEqual(busy.contributors90.map((c) => [c.name, c.bot]), [['Developer 0', false], ['Developer 1', false], ['Developer 2', false], ['dependabot[bot]', true]]);
   assert.equal(busy.frequency, 'more-5-week');
   assert.equal(busy.scans, 52);
   const mid = by('org0/repo1'); // profile 1: 12,000 lines, 2 a week

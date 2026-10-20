@@ -152,7 +152,7 @@ export async function estimateFromLanguages(api, repo, { countCategories = ['cod
 export async function measureRepo(repo, { session, conn, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, maxArchiveBytes = 1024 ** 3, countCategories, locBasis, now = Date.now(), signal, onPhase = () => {} }) {
   const { provider, api } = session;
   if (!provider.archive || !api) throw new Error(`${provider.label} is not supported in the standalone page`);
-  if (!repo.defaultBranch) return { empty: true, commits: 0, authors: 0, devs90: 0, devIds90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null, engine: 'browser' };
+  if (!repo.defaultBranch) return { empty: true, commits: 0, authors: 0, devs90: 0, bots90: 0, contributors90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null, engine: 'browser' };
   const since = new Date(now - windowDays * DAY).toISOString();
 
   onPhase('history');
@@ -202,7 +202,8 @@ export async function measureRepo(repo, { session, conn, windowDays = 365, inclu
     commits: stats.commits,
     authors: stats.authors,
     devs90: stats.devs90,
-    devIds90: stats.devIds90,
+    bots90: stats.bots90,
+    contributors90: stats.contributors90,
     weekly: stats.weekly,
     lastCommitAt: stats.lastCommitAt,
     windowDays: Math.round(effectiveWindow * 10) / 10,

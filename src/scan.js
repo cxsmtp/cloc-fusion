@@ -174,7 +174,7 @@ async function runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, p
   return report;
 }
 
-const MEASURED = ['engine', 'headSha', 'branch', 'commits', 'authors', 'devs90', 'devIds90', 'weekly', 'lastCommitAt', 'windowDays', 'treeFiles', 'loc', 'files', 'code', 'comment', 'blank', 'byCategory', 'languages', 'mainLanguage', 'empty', 'analyzedAt'];
+const MEASURED = ['engine', 'headSha', 'branch', 'commits', 'authors', 'devs90', 'bots90', 'contributors90', 'weekly', 'lastCommitAt', 'windowDays', 'treeFiles', 'loc', 'files', 'code', 'comment', 'blank', 'byCategory', 'languages', 'mainLanguage', 'empty', 'analyzedAt'];
 const pick = (r) => Object.fromEntries(MEASURED.filter((k) => r[k] !== undefined).map((k) => [k, r[k]]));
 
 async function checkpoint(outDir, cfg, repos, results, problems) {

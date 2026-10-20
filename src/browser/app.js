@@ -9,7 +9,7 @@ import { classifyRepos, dedupeRepos } from '../discover.js';
 import { measureRepo } from './engine.js';
 import { pool } from '../pool.js';
 import { toHtml } from '../report/html.js';
-import { toCsv } from '../report/csv.js';
+import { toCsv, toContributorsCsv } from '../report/csv.js';
 import { FREQUENCIES, CRITICALITIES, suggestedScans } from '../fusion.js';
 import { UI_DEFAULTS } from '../ui/defaults.js';
 import { VERSION } from '../version.js';
@@ -631,6 +631,7 @@ function renderEstimate() {
       h('button', { type: 'button', class: 'primary', onclick: () => openReport() }, icon('report'), 'Open the full report'),
       h('button', { type: 'button', class: 'sm', onclick: () => download(`${name}.html`, toHtml(report), 'text/html') }, icon('download'), 'HTML'),
       h('button', { type: 'button', class: 'sm', onclick: () => download(`${name}.csv`, `﻿${toCsv(report)}`, 'text/csv') }, 'CSV'),
+      h('button', { type: 'button', class: 'sm', onclick: () => download(`cloc-fusion-contributors-${r.generatedAt.slice(0, 10)}.csv`, toContributorsCsv(report), 'text/csv') }, 'Contributors'),
       h('button', { type: 'button', class: 'sm', onclick: () => download(`${name}.json`, JSON.stringify(report, null, 2), 'application/json') }, 'JSON'),
     ),
     h('div', { class: 'unit', style: 'margin-top:10px' }, `Measured ${new Date(r.generatedAt).toLocaleString()} · cloc-fusion ${r.version}${r.partial ? ' · partial' : ''}`),

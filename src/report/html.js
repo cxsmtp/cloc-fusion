@@ -80,6 +80,7 @@ export function toHtml(report) {
     cw: r.commitsPerWeek ?? null,
     au: r.authors ?? null,
     dv: r.devs90 ?? null,
+    bt: r.bots90 ?? null,
     lc: r.lastCommitAt ? r.lastCommitAt.slice(0, 10) : '',
     fq: r.frequencyLabel || '',
     fr: r.frequency || '',
@@ -97,6 +98,10 @@ export function toHtml(report) {
     er: r.error || '',
   }));
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
+  // Everyone who committed in the last 90 days, with their repositories (as row numbers of the table above).
+  const rowOf = new Map(report.repos.map((r, i) => [r.fullName, i]));
+  const people = report.contributors || [];
+  const contribJson = JSON.stringify(people.map((c) => ({ n: c.name || '', e: c.email || '', b: c.bot ? 1 : 0, c: c.commits, l: c.lastCommitAt ? c.lastCommitAt.slice(0, 10) : '', r: c.repos.map((n) => rowOf.get(n)).filter((i) => i !== undefined) }))).replace(/</g, '\\u003c');
 
   const heroFigure = priced
     ? `<div class="hero-figure">${count(c.total, digits(c.total))}</div><div class="hero-unit">Fusion credits · ${num(f.periodMonths)} months</div>`
@@ -271,6 +276,9 @@ input[type=search]{flex:1;min-width:220px;padding-left:36px;background-image:url
 #repos th[aria-sort=ascending]::after{content:" ↑";color:var(--accent)}
 #repos th[aria-sort=descending]::after{content:" ↓";color:var(--accent)}
 #repos tbody tr{animation:rowin .4s var(--ease) both}
+#contribs td.repos{white-space:normal;min-width:260px;max-width:520px;color:var(--muted);font-size:12.5px}
+.kind{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--ng-glass-line);color:var(--muted)}
+.kind.bot{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
 @keyframes rowin{from{opacity:0;transform:translateY(4px)}}
 .spark{display:block}
 #repos td.cd{color:var(--accent);font-weight:600}
@@ -341,7 +349,7 @@ ${BRAND_CSS}
 ${tile('Repositories', count(k.measured), `${num(k.discovered)} found · ${num(k.skipped)} skipped${k.failed ? ` · <span class="bad">${num(k.failed)} failed</span>` : ''}`, ICONS.repo)}
 ${tile('Lines of code', count(t.lines), `${num(t.units)} × 10K units, each repository rounded up`, ICONS.code)}
 ${tile('Commits in window', count(t.commits), `${num(weekly, 1)} a week across the estate`, ICONS.pulse)}
-${tile('Developers · 90 days', count(dev.total), `Unique across repositories · bots excluded${devNote}`, ICONS.people, 'tile-devs')}
+${tile('Developers · 90 days', count(dev.total), `Unique across repositories · ${num(dev.bots || 0)} bot${dev.bots === 1 ? '' : 's'} listed separately${devNote}`, ICONS.people, 'tile-devs')}
 ${tile('Fusion scans', count(t.scans), `${num(t.unitScans)} 10K-unit scans over ${num(f.periodMonths)} months`, ICONS.scan, 'tile-scans')}
 ${tile('Fusion credits', priced ? count(c.total, digits(c.total)) : '—', priced ? `${num(c.bundles)} bundle${c.bundles === 1 ? '' : 's'} of ${num(c.settings.bundleCredits)}` : '<span class="warn">Set credits per 10K LOC</span>', ICONS.spark, 'tile-credits')}
 </section>
@@ -376,6 +384,18 @@ ${tuneSection(ICONS)}
 </tr></thead><tbody></tbody></table></div>
 <div class="more"><button type="button" id="more" hidden>Show more</button><button type="button" id="all" hidden>Show all</button></div>
 
+${report.contributors ? `<h2 class="reveal" id="contributors">Contributors · last 90 days <span class="n-chip">${num(dev.total)} developer${dev.total === 1 ? '' : 's'} · ${num(dev.bots || 0)} bot${dev.bots === 1 ? '' : 's'}</span></h2>
+<p class="lede reveal">Everyone who committed to a default branch in the last 90 days, from the commit history, with the repositories they contributed to. Each person is listed once, by email. Bots (automation accounts) are listed as bots and not counted as developers.</p>
+<div class="tools reveal">
+<input type="search" id="cq" placeholder="Filter by name, email or repository…" aria-label="Filter contributors">
+<select id="ct" aria-label="Type"><option value="">Developers and bots</option><option value="d">Developers</option><option value="b">Bots</option></select>
+<span id="ccount" class="pill"></span>
+<button type="button" id="ccsv" class="label-sm" title="Download the contributors as CSV">${ICONS.download}<span>Contributors CSV</span></button>
+</div>
+<div class="glass table-wrap reveal" style="max-height:70vh"><table id="contribs">
+<thead><tr><th>Name</th><th>Email</th><th>Type</th><th class="n">Repositories</th><th class="n">Commits (90 d)</th><th>Last commit</th><th>Contributed to</th></tr></thead><tbody></tbody></table></div>
+<div class="more"><button type="button" id="cmore" hidden>Show more</button></div>` : ''}
+
 ${report.problems?.length ? `<h2 class="reveal">Needs attention <span class="n-chip">${num(report.problems.length)}</span></h2><div class="glass table-wrap reveal problems"><table><thead><tr><th>Connection</th><th>Organization</th><th>Problem</th></tr></thead><tbody>${report.problems.map((p) => `<tr><td>${esc(p.connection)}</td><td>${esc(p.org || '')}</td><td class="bad">${esc(p.error)}</td></tr>`).join('')}</tbody></table></div>` : ''}
 
 <section class="glass next reveal">
@@ -386,6 +406,7 @@ ${report.problems?.length ? `<h2 class="reveal">Needs attention <span class="n-c
 <footer><span>cloc-fusion v${version} · lines of code are ${esc(report.settings.locBasis === 'all' ? 'all lines' : report.settings.locBasis === 'code+comments' ? 'code and comment lines' : 'code lines (no blanks or comments)')} in ${esc((report.settings.countCategories || []).join(', '))} files, excluding dependencies, build output and generated files.</span><span>Commit window ${num(report.settings.windowDays)} days · measured in ${num(report.durationSeconds || 0)} s</span></footer>
 </main>
 <script id="data" type="application/json">${json}</script>
+<script id="contrib" type="application/json">${contribJson}</script>
 <script id="app">
 (function(){
 var W=typeof window!=='undefined'?window:{},D=document,root=D.documentElement||{dataset:{},setAttribute:function(){},removeAttribute:function(){}};
@@ -430,7 +451,7 @@ var shown=view.slice(0,limit);more.hidden=every.hidden=shown.length>=view.length
 tbody.innerHTML=shown.map(function(r,i){
 var name=r.u&&/^https?:/i.test(r.u)?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
 var status=r.st==='ok'?'<span class="status ok">measured</span>':r.st==='failed'?'<span class="status bad" title="'+esc(r.er)+'">failed</span>':'<span class="status warn">'+esc(r.st)+'</span>';
-return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.fq)+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.crit(r):fmt(r.cr))+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.scans(r):fmt(r.sc))+'</td><td'+(T?' class="pick"':'')+'>'+(T?T.model(r):esc(r.md))+'</td><td class="n cd">'+fmt(r.cd,1)+'</td><td class="n"'+(r.es?' title="Estimated from the platform&#39;s language statistics"':'')+'>'+(r.es?'≈ ':'')+fmt(r.loc)+'</td><td class="n">'+fmt(r.un)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.dv)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.lg)+'</td><td>'+status+'</td></tr>'}).join('');
+return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.fq)+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.crit(r):fmt(r.cr))+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.scans(r):fmt(r.sc))+'</td><td'+(T?' class="pick"':'')+'>'+(T?T.model(r):esc(r.md))+'</td><td class="n cd">'+fmt(r.cd,1)+'</td><td class="n"'+(r.es?' title="Estimated from the platform&#39;s language statistics"':'')+'>'+(r.es?'≈ ':'')+fmt(r.loc)+'</td><td class="n">'+fmt(r.un)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n"'+(r.bt?' title="'+r.bt+' bot'+(r.bt===1?'':'s')+' too"':'')+'>'+fmt(r.dv)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.lg)+'</td><td>'+status+'</td></tr>'}).join('');
 all$('#repos th').forEach(function(th){th.setAttribute('aria-sort',th.getAttribute('data-k')===sortKey?(dir>0?'ascending':'descending'):'none')});
 }
 all$('#repos th').forEach(function(th){th.addEventListener('click',function(){var k=th.getAttribute('data-k');if(k===sortKey)dir=-dir;else{sortKey=k;dir=['n','o','lg','md','st','fr','lc'].indexOf(k)>=0?1:-1}render()})});
@@ -448,6 +469,16 @@ on('csv',function(){csv(view,'fusion-plan-view.csv')});
 on('csv-all',function(){csv(plan(),'fusion-plan.csv')});on('csv-plan',function(){csv(plan(),'fusion-plan.csv')});
 on('to-repos',function(){var t=D.getElementById('repositories');if(t&&t.scrollIntoView)t.scrollIntoView({behavior:still?'auto':'smooth'})});
 on('print',function(){if(W.print)W.print()});
+/* Contributors in the last 90 days */
+var ctb=D.querySelector('#contribs tbody'),cq=D.getElementById('cq'),ct=D.getElementById('ct'),ccount=D.getElementById('ccount'),cmore=D.getElementById('cmore'),climit=PAGE,cview=[];
+var people=[];try{var cel=D.getElementById('contrib');people=cel?JSON.parse(cel.textContent):[]}catch(e){people=[]}
+function cfilter(){var text=(cq.value||'').trim().toLowerCase(),k=ct.value;return people.filter(function(p){if(k==='d'&&p.b)return false;if(k==='b'&&!p.b)return false;if(!text)return true;if((p.n+' '+p.e).toLowerCase().indexOf(text)>=0)return true;for(var i=0;i<p.r.length;i++){var r=rows[p.r[i]];if(r&&r.n.toLowerCase().indexOf(text)>=0)return true}return false})}
+function crender(){if(!ctb)return;cview=cfilter();ccount.textContent=cview.length+' of '+people.length;var shown=cview.slice(0,climit);cmore.hidden=shown.length>=cview.length;
+ctb.innerHTML=shown.map(function(p){var names=p.r.map(function(i){return rows[i]?rows[i].n:''}).filter(Boolean);var list=names.slice(0,4).map(esc).join(', ')+(names.length>4?' <span title="'+esc(names.join(', '))+'">+'+(names.length-4)+' more</span>':'');
+return '<tr><td>'+esc(p.n)+'</td><td>'+esc(p.e)+'</td><td><span class="kind'+(p.b?' bot':'')+'">'+(p.b?'Bot':'Developer')+'</span></td><td class="n">'+fmt(p.r.length)+'</td><td class="n">'+fmt(p.c)+'</td><td>'+esc(p.l)+'</td><td class="repos">'+list+'</td></tr>'}).join('')}
+if(ctb){var ctimer;[cq,ct].forEach(function(el){el.addEventListener('input',function(){clearTimeout(ctimer);ctimer=setTimeout(function(){climit=PAGE;crender()},120)})});cmore.addEventListener('click',function(){climit+=PAGE;crender()});
+on('ccsv',function(){var head=['Name','Email','Type','Repositories','Commits (90 days)','Last commit','Repository list'];var lines=[head.join(',')].concat(cview.map(function(p){return[p.n,p.e,p.b?'Bot':'Developer',p.r.length,p.c,p.l,p.r.map(function(i){return rows[i]?rows[i].n:''}).join('; ')].map(cell).join(',')}));
+if(typeof Blob==='undefined'||!W.URL)return;var url=W.URL.createObjectURL(new Blob(['\\ufeff'+lines.join('\\r\\n')],{type:'text/csv'}));var a=D.createElement('a');a.href=url;a.download='cloc-fusion-contributors.csv';D.body.appendChild(a);a.click();a.remove();setTimeout(function(){W.URL.revokeObjectURL(url)},1000)});crender()}
 /* Tune the plan: models, scans and pricing chosen on the page (src/report/tune.js) */
 try{T=(${tuner.toString()})({rows:rows,base:BASE,D:D,W:W,store:store,fmt:fmt,esc:esc,tbody:tbody,render:function(){render()}})}catch(e){T=null}
 render();
