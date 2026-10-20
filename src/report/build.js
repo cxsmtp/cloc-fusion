@@ -3,6 +3,7 @@
 import { VERSION } from '../version.js';
 import { frequencyOf, frequencyLabel, fusionEstimate, creditSummary } from '../fusion.js';
 import { globToRegExp } from '../languages.js';
+import { DEV_WINDOW_DAYS } from '../commits.js';
 
 /** The configuration as it may appear in reports: no secrets, only what identifies a connection. */
 export function redactConfig(cfg) {
@@ -59,6 +60,23 @@ export function buildReport(cfg, repos, problems = [], { started = Date.now(), p
       l.blank += t.blank;
     }
   }
+  // Contributing developers in the last 90 days: each repository's, and unique across the estate
+  // and per organization (the same person in several repositories counts once).
+  const everyone = new Set();
+  const byOrgDevs = new Map();
+  let devData = 0;
+  for (const r of measured) {
+    if (!Array.isArray(r.devIds90)) continue;
+    devData++;
+    const k = `${r.connection}\u0000${r.org}`;
+    if (!byOrgDevs.has(k)) byOrgDevs.set(k, new Set());
+    for (const id of r.devIds90) {
+      everyone.add(id);
+      byOrgDevs.get(k).add(id);
+    }
+  }
+  const byOrg = estimate.byOrg.map((o) => ({ ...o, devs90: byOrgDevs.get(`${o.connection}\u0000${o.org}`)?.size ?? 0 }));
+  const developers = { windowDays: DEV_WINDOW_DAYS, coveredDays: Math.min(DEV_WINDOW_DAYS, Number(cfg.windowDays) || 365), total: everyone.size, repos: devData };
   return {
     tool: 'cloc-fusion',
     version: VERSION,
@@ -80,7 +98,8 @@ export function buildReport(cfg, repos, problems = [], { started = Date.now(), p
     credits: summary,
     byFrequency: estimate.byFrequency,
     byModel: estimate.byModel,
-    byOrg: estimate.byOrg,
+    byOrg,
+    developers,
     languages,
     problems,
     repos: estimate.rows,

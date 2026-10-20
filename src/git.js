@@ -9,6 +9,7 @@ import { rm, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { selectFiles, LocTally } from './loc.js';
+import { developersOf } from './commits.js';
 
 const DAY = 86400000;
 
@@ -170,6 +171,7 @@ export function parseLsTree(buf) {
 export function commitStats(text, { now = Date.now(), weeks = 52 } = {}) {
   const series = new Array(weeks).fill(0);
   const authors = new Set();
+  const counted = [];
   let commits = 0;
   let last = null;
   for (const line of text.split('\n')) {
@@ -178,12 +180,13 @@ export function commitStats(text, { now = Date.now(), weeks = 52 } = {}) {
     const t = Number(ts) * 1000;
     if (!Number.isFinite(t)) continue;
     commits++;
+    counted.push({ t, email });
     if (email) authors.add(email.toLowerCase());
     if (last === null || t > last) last = t;
     const w = Math.floor((now - t) / (7 * DAY));
     if (w >= 0 && w < weeks) series[weeks - 1 - w]++;
   }
-  return { commits, authors: authors.size, lastCommitAt: last ? new Date(last).toISOString() : null, weekly: series };
+  return { commits, authors: authors.size, lastCommitAt: last ? new Date(last).toISOString() : null, weekly: series, ...developersOf(counted, now) };
 }
 
 /**
@@ -224,7 +227,7 @@ export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = nu
     try {
       headSha = (await git(['rev-parse', 'HEAD'], { cwd: dir, env })).stdout.toString().trim();
     } catch {
-      return { empty: true, commits: 0, authors: 0, windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
+      return { empty: true, commits: 0, authors: 0, devs90: 0, devIds90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
     }
     const headBranch = (await git(['symbolic-ref', '--short', 'HEAD'], { cwd: dir, env }).catch(() => ({ stdout: Buffer.from(repo.defaultBranch || '') }))).stdout.toString().trim();
 
@@ -267,6 +270,8 @@ export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = nu
       branch: headBranch,
       commits: stats.commits,
       authors: stats.authors,
+      devs90: stats.devs90,
+      devIds90: stats.devIds90,
       weekly: stats.weekly,
       lastCommitAt: stats.lastCommitAt,
       windowDays: Math.round(effectiveWindow * 10) / 10,

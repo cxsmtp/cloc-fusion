@@ -57,6 +57,7 @@ export function tuneBase(report) {
   const t = report.credits.settings;
   return {
     key: `${report.generatedAt}|${report.repos.length}`,
+    orgDevs: Object.fromEntries(report.byOrg.map((o) => [`${o.connection}\u0000${o.org}`, o.devs90 ?? null])),
     periodMonths: f.periodMonths,
     defaultScans: f.defaultScans,
     defaultModel: f.defaultModel,
@@ -203,8 +204,8 @@ export function tuner(ctx) {
     }).join('') : '<tr><td colspan="5"><span class="warn">No Fusion model yet: add one above with its credits per 10K LOC.</span></td></tr>');
     setHtml('org-body', e.orgOrder.map(function (k) {
       var g = e.byO[k];
-      return '<tr><td>' + esc(g.c) + '</td><td>' + esc(g.o) + '</td><td class="n">' + fmt(g.repos) + '</td><td class="n">' + fmt(g.counted) + '</td><td class="n">' + fmt(g.lines) + '</td><td class="n">' + fmt(g.commits) + '</td><td class="n">' + fmt(g.scans) + '</td><td class="n">' + (e.priced ? fmt(g.credits, 1) : '—') + '</td></tr>';
-    }).join('') || '<tr><td colspan="8">None</td></tr>');
+      return '<tr><td>' + esc(g.c) + '</td><td>' + esc(g.o) + '</td><td class="n">' + fmt(g.repos) + '</td><td class="n">' + fmt(g.counted) + '</td><td class="n">' + fmt(g.lines) + '</td><td class="n">' + fmt(g.commits) + '</td><td class="n">' + fmt(base.orgDevs ? base.orgDevs[k] : null) + '</td><td class="n">' + fmt(g.scans) + '</td><td class="n">' + (e.priced ? fmt(g.credits, 1) : '—') + '</td></tr>';
+    }).join('') || '<tr><td colspan="9">None</td></tr>');
     setHtml('tune-kpis',
       '<div class="tune-kpi gold"><span>Fusion credits</span><b>' + (e.priced ? fmt(e.total, digits(e.total)) : '—') + '</b><small>' + (e.extra ? fmt(e.sum.credits, 1) + ' + ' + fmt(e.extra, 2) + '% on top' : 'over ' + fmt(S.period) + ' months') + '</small></div>' +
       '<div class="tune-kpi"><span>Bundles</span><b>' + fmt(e.bundles) + '</b><small>of ' + fmt(e.bundle) + ' credits</small></div>' +

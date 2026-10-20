@@ -810,7 +810,7 @@ function clientApp(boot) {
       h('div', { class: 'eyebrow' }, 'Live estimate'),
       h('div', { style: 'margin:12px 0 2px' }, fig),
       h('div', { class: 'unit' }, known ? `Fusion credits · ${rep.periodMonths} months · ${fmt(rep.credits.bundles)} bundle${rep.credits.bundles === 1 ? '' : 's'}` : '10K-unit scans · set a model rate to price'),
-      h('div', { class: 'tiles', style: 'margin-top:14px' }, h('div', { class: 'tile' }, h('span', null, 'Repositories'), h('b', null, fmt(rep.counts.measured))), h('div', { class: 'tile' }, h('span', null, 'Lines of code'), h('b', null, fmt(rep.totals.lines))), h('div', { class: 'tile' }, h('span', null, 'Fusion scans'), h('b', null, fmt(rep.totals.scans))), h('div', { class: 'tile' }, h('span', null, 'Commits'), h('b', null, fmt(rep.totals.commits)))),
+      h('div', { class: 'tiles', style: 'margin-top:14px' }, h('div', { class: 'tile' }, h('span', null, 'Repositories'), h('b', null, fmt(rep.counts.measured))), h('div', { class: 'tile' }, h('span', null, 'Lines of code'), h('b', null, fmt(rep.totals.lines))), h('div', { class: 'tile' }, h('span', null, 'Fusion scans'), h('b', null, fmt(rep.totals.scans))), h('div', { class: 'tile' }, h('span', null, 'Commits'), h('b', null, fmt(rep.totals.commits))), h('div', { class: 'tile', style: 'grid-column:1/-1', title: 'Unique across repositories, bots excluded' }, h('span', null, 'Contributing developers · last 90 days'), h('b', null, fmt(rep.developers?.total)))),
       h(
         'div',
         { class: 'mini', style: 'margin-top:14px' },

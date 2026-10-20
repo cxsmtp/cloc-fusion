@@ -57,6 +57,7 @@ function summarize(report) {
     counts: report.counts,
     totals: report.totals,
     credits: report.credits,
+    developers: report.developers,
     byFrequency: report.byFrequency,
     periodMonths: report.settings?.fusion?.periodMonths,
     top: (report.repos || [])

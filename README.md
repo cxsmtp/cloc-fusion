@@ -39,7 +39,7 @@ This example is priced at 2 credits per 10K LOC; you set your own rate.
 | web-portal | 61,200 | 2.1 | 1 to 5 a week | 26 | 364 |
 | legacy-batch | 23,900 | 0 | Not in the window | 1 | 6 |
 
-The report also shows totals and the number of credit bundles you need. It breaks the estate down by change frequency, organization, Fusion model and language, and includes a 52-week activity sparkline per repository.
+The report also shows totals, the number of credit bundles you need, and the **contributing developers in the last 90 days**: per repository, per organization and unique across the estate (bots excluded, each person counted once). It breaks the estate down by change frequency, organization, Fusion model and language, and includes a 52-week activity sparkline per repository.
 
 ---
 
@@ -175,6 +175,8 @@ Neither engine writes a working tree, and clones are deleted as soon as a reposi
 
 **Commits** means non-merge commits on the default branch within the window (365 days by default), plus active authors and the last commit date. A repository younger than the window uses its own age.
 
+**Contributing developers (90 days)** are the distinct authors of those commits in the last 90 days. Email addresses are compared case-insensitively; automation accounts (dependabot, renovate, github-actions, any `[bot]`) are left out. The estate total and the per-organization totals count each person once, however many repositories they work in. Reports store one-way ids for this, never email addresses. Someone who commits under two email addresses counts twice.
+
 ### Reports
 
 Reports are written to `cloc-fusion-output/`:
@@ -253,7 +255,7 @@ Claude (`claude-opus-5-5` by default) reads the report and writes `cloc-fusion-o
 ### Building from source
 
 ```
-npm test                          # 60 tests: engines, providers, reports, web app, standalone page, security, versioning
+npm test                          # 64 tests: engines, providers, reports, web app, standalone page, security, versioning
 node bench/bench.js --repos 1000  # benchmarks
 node scripts/build-binary.mjs     # standalone executable for this OS → dist/
 ```

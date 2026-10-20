@@ -17,6 +17,7 @@ const ICONS = {
   repo: '<svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h12v16H6a2 2 0 0 0-2 2V5Z"/><path d="M4 19a2 2 0 0 1 2-2h12"/></svg>',
   code: '<svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5M13 4l-2 16"/></svg>',
   pulse: '<svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
+  people: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0M15.5 5.2a3 3 0 0 1 0 5.6M17 13.6a5.5 5.5 0 0 1 3.5 5.4"/></svg>',
   scan: '<svg viewBox="0 0 24 24"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M4 12h16"/></svg>',
   spark: '<svg viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M6 18l2.5-2.5M15.5 8.5 18 6"/></svg>',
   check: '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
@@ -50,8 +51,11 @@ export function toHtml(report) {
 </div>`;
     })
     .join('');
+  // Contributing developers in the last 90 days (unique across repositories; bots excluded).
+  const dev = report.developers || { total: null, repos: 0, windowDays: 90, coveredDays: 90 };
+  const devNote = dev.coveredDays < dev.windowDays ? ` · <span class="warn">only ${num(dev.coveredDays)} days of commits were read</span>` : '';
   const orgRows = report.byOrg
-    .map((o) => `<tr><td>${esc(o.connection)}</td><td>${esc(o.org)}</td><td class="n">${num(o.repos)}</td><td class="n">${num(o.counted)}</td><td class="n">${num(o.lines)}</td><td class="n">${num(o.commits)}</td><td class="n">${num(o.scans)}</td><td class="n">${priced ? num(o.credits, 1) : '—'}</td></tr>`)
+    .map((o) => `<tr><td>${esc(o.connection)}</td><td>${esc(o.org)}</td><td class="n">${num(o.repos)}</td><td class="n">${num(o.counted)}</td><td class="n">${num(o.lines)}</td><td class="n">${num(o.commits)}</td><td class="n">${num(o.devs90)}</td><td class="n">${num(o.scans)}</td><td class="n">${priced ? num(o.credits, 1) : '—'}</td></tr>`)
     .join('');
   const langs = Object.entries(report.languages).sort((a, b) => b[1].code - a[1].code);
   const langMax = Math.max(1, ...langs.map(([, l]) => l.code));
@@ -75,6 +79,7 @@ export function toHtml(report) {
     cm: r.commits ?? null,
     cw: r.commitsPerWeek ?? null,
     au: r.authors ?? null,
+    dv: r.devs90 ?? null,
     lc: r.lastCommitAt ? r.lastCommitAt.slice(0, 10) : '',
     fq: r.frequencyLabel || '',
     fr: r.frequency || '',
@@ -212,13 +217,13 @@ button.golden:hover{filter:brightness(1.05);background:linear-gradient(120deg,#f
 .in .step.done .step-dot,body:not(.pre) .step.done .step-dot{color:#fff;border-color:transparent;background:linear-gradient(135deg,var(--ng-from),var(--ng-to));box-shadow:0 0 0 4px color-mix(in srgb,var(--ng-from) 16%,transparent),0 0 20px var(--ng-glow)}
 .step-title{font-weight:700;font-size:14px}
 .step-sub{font:500 12px var(--mono);color:var(--muted)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(200px,100%),1fr));gap:14px;margin-top:18px}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(168px,100%),1fr));gap:12px;margin-top:18px}
 .tile{position:relative;overflow:hidden;padding:18px 18px 16px;border-radius:18px;background:var(--ng-glass);border:1px solid var(--ng-glass-line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);box-shadow:var(--shadow);transition:transform .35s var(--ease),box-shadow .35s var(--ease),border-color .35s,opacity .7s var(--ease)}
 .tile::before{content:"";position:absolute;inset:0 0 auto;height:2px;background:linear-gradient(90deg,var(--ng-from),var(--ng-to));opacity:.7}
 .tile:hover{transform:translateY(-3px);border-color:color-mix(in srgb,var(--ng-from) 35%,transparent);box-shadow:var(--shadow),0 18px 40px -22px var(--ng-glow)}
 .tile-icon{position:absolute;right:14px;top:14px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;color:var(--accent);background:var(--accent-soft)}
 .tile-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.tile-label{font:600 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ng-head)}
+.tile-label{font:600 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--ng-head);padding-right:34px}
 .tile-value{font:600 28px/1.15 var(--mono);letter-spacing:-.03em;margin-top:8px}
 .tile-note{font-size:12.5px;color:var(--muted);margin-top:4px}
 h2{font-size:19px;font-weight:700;letter-spacing:-.015em;margin:44px 0 6px;display:flex;align-items:center;gap:10px}
@@ -313,7 +318,7 @@ ${BRAND_CSS}
 <div>
 <div class="eyebrow">Fusion readiness${report.partial ? ' · partial scan' : ''}</div>
 <h1 id="hero-title"><span class="grad">${num(k.measured)} ${k.measured === 1 ? 'repository' : 'repositories'}</span> sized and ready for Fusion</h1>
-<p>${num(t.lines)} lines of code and ${num(t.commits)} commits analysed across ${num(report.byOrg.length)} ${report.byOrg.length === 1 ? 'organization' : 'organizations'}. Every repository now has a Fusion cadence matched to how fast it changes, so unknown issues surface as fast as your teams ship.</p>
+<p>${num(t.lines)} lines of code, ${num(t.commits)} commits and ${num(dev.total)} contributing developer${dev.total === 1 ? '' : 's'} in the last 90 days, across ${num(report.byOrg.length)} ${report.byOrg.length === 1 ? 'organization' : 'organizations'}. Every repository now has a Fusion cadence matched to how fast it changes, so unknown issues surface as fast as your teams ship.</p>
 <div class="hero-actions">
 <button type="button" class="golden" id="csv-all">${ICONS.download}<span>Download the Fusion plan</span></button>
 <button type="button" id="to-repos">${ICONS.repo}<span>Explore repositories</span></button>
@@ -336,6 +341,7 @@ ${BRAND_CSS}
 ${tile('Repositories', count(k.measured), `${num(k.discovered)} found · ${num(k.skipped)} skipped${k.failed ? ` · <span class="bad">${num(k.failed)} failed</span>` : ''}`, ICONS.repo)}
 ${tile('Lines of code', count(t.lines), `${num(t.units)} × 10K units, each repository rounded up`, ICONS.code)}
 ${tile('Commits in window', count(t.commits), `${num(weekly, 1)} a week across the estate`, ICONS.pulse)}
+${tile('Developers · 90 days', count(dev.total), `Unique across repositories · bots excluded${devNote}`, ICONS.people, 'tile-devs')}
 ${tile('Fusion scans', count(t.scans), `${num(t.unitScans)} 10K-unit scans over ${num(f.periodMonths)} months`, ICONS.scan, 'tile-scans')}
 ${tile('Fusion credits', priced ? count(c.total, digits(c.total)) : '—', priced ? `${num(c.bundles)} bundle${c.bundles === 1 ? '' : 's'} of ${num(c.settings.bundleCredits)}` : '<span class="warn">Set credits per 10K LOC</span>', ICONS.spark, 'tile-credits')}
 </section>
@@ -348,8 +354,8 @@ ${tuneSection(ICONS)}
 
 <div class="grid2">
 <div><h2 class="reveal">Organizations</h2><div class="glass table-wrap reveal"><table>
-<thead><tr><th>Connection</th><th>Organization</th><th class="n">Repos</th><th class="n">Measured</th><th class="n">LOC</th><th class="n">Commits</th><th class="n">Scans</th><th class="n">Credits</th></tr></thead>
-<tbody id="org-body">${orgRows || '<tr><td colspan="8">None</td></tr>'}</tbody></table></div>
+<thead><tr><th>Connection</th><th>Organization</th><th class="n">Repos</th><th class="n">Measured</th><th class="n">LOC</th><th class="n">Commits</th><th class="n" title="Contributing developers in the last 90 days, unique in the organization">Devs (90 d)</th><th class="n">Scans</th><th class="n">Credits</th></tr></thead>
+<tbody id="org-body">${orgRows || '<tr><td colspan="9">None</td></tr>'}</tbody></table></div>
 <h2 class="reveal">Fusion models</h2><div class="glass table-wrap reveal"><table>
 <thead><tr><th>Model</th><th class="n">Credits / 10K LOC</th><th class="n">Repos</th><th class="n">10K-unit scans</th><th class="n">Credits</th></tr></thead>
 <tbody id="model-body">${modelRows || '<tr><td colspan="5"><span class="warn">No Fusion model yet: add one with its credits per 10K LOC (cloc-fusion price --credits-per-10k N).</span></td></tr>'}</tbody></table></div></div>
@@ -366,7 +372,7 @@ ${tuneSection(ICONS)}
 </div>
 <div class="glass table-wrap reveal" style="max-height:78vh"><table id="repos">
 <thead><tr>
-<th data-k="n">Repository</th><th data-k="o">Organization</th><th data-k="fr">Change frequency</th><th class="n" data-k="cr">Criticality</th><th class="n" data-k="sc">Fusion scans</th><th data-k="md">Model</th><th class="n" data-k="cd">Credits</th><th class="n" data-k="loc">LOC</th><th class="n" data-k="un">10K units</th><th class="n" data-k="cm">Commits</th><th class="n" data-k="cw">Per week</th><th data-k="w">Last 52 weeks</th><th class="n" data-k="au">Authors</th><th data-k="lc">Last commit</th><th data-k="lg">Language</th><th data-k="st">Status</th>
+<th data-k="n">Repository</th><th data-k="o">Organization</th><th data-k="fr">Change frequency</th><th class="n" data-k="cr">Criticality</th><th class="n" data-k="sc">Fusion scans</th><th data-k="md">Model</th><th class="n" data-k="cd">Credits</th><th class="n" data-k="loc">LOC</th><th class="n" data-k="un">10K units</th><th class="n" data-k="cm">Commits</th><th class="n" data-k="dv" title="Contributing developers in the last 90 days">Devs (90 d)</th><th class="n" data-k="cw">Per week</th><th data-k="w">Last 52 weeks</th><th class="n" data-k="au">Authors</th><th data-k="lc">Last commit</th><th data-k="lg">Language</th><th data-k="st">Status</th>
 </tr></thead><tbody></tbody></table></div>
 <div class="more"><button type="button" id="more" hidden>Show more</button><button type="button" id="all" hidden>Show all</button></div>
 
@@ -424,7 +430,7 @@ var shown=view.slice(0,limit);more.hidden=every.hidden=shown.length>=view.length
 tbody.innerHTML=shown.map(function(r,i){
 var name=r.u&&/^https?:/i.test(r.u)?'<a href="'+esc(r.u)+'" target="_blank" rel="noopener">'+esc(r.n)+'</a>':esc(r.n);
 var status=r.st==='ok'?'<span class="status ok">measured</span>':r.st==='failed'?'<span class="status bad" title="'+esc(r.er)+'">failed</span>':'<span class="status warn">'+esc(r.st)+'</span>';
-return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.fq)+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.crit(r):fmt(r.cr))+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.scans(r):fmt(r.sc))+'</td><td'+(T?' class="pick"':'')+'>'+(T?T.model(r):esc(r.md))+'</td><td class="n cd">'+fmt(r.cd,1)+'</td><td class="n"'+(r.es?' title="Estimated from the platform&#39;s language statistics"':'')+'>'+(r.es?'≈ ':'')+fmt(r.loc)+'</td><td class="n">'+fmt(r.un)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.lg)+'</td><td>'+status+'</td></tr>'}).join('');
+return '<tr'+(i<24?' style="animation-delay:'+(i*14)+'ms"':'')+'><td>'+name+'</td><td>'+esc(r.o)+'</td><td>'+esc(r.fq)+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.crit(r):fmt(r.cr))+'</td><td class="n'+(T?' pick':'')+'">'+(T?T.scans(r):fmt(r.sc))+'</td><td'+(T?' class="pick"':'')+'>'+(T?T.model(r):esc(r.md))+'</td><td class="n cd">'+fmt(r.cd,1)+'</td><td class="n"'+(r.es?' title="Estimated from the platform&#39;s language statistics"':'')+'>'+(r.es?'≈ ':'')+fmt(r.loc)+'</td><td class="n">'+fmt(r.un)+'</td><td class="n">'+fmt(r.cm)+'</td><td class="n">'+fmt(r.dv)+'</td><td class="n">'+fmt(r.cw,1)+'</td><td>'+spark(r.w)+'</td><td class="n">'+fmt(r.au)+'</td><td>'+esc(r.lc)+'</td><td>'+esc(r.lg)+'</td><td>'+status+'</td></tr>'}).join('');
 all$('#repos th').forEach(function(th){th.setAttribute('aria-sort',th.getAttribute('data-k')===sortKey?(dir>0?'ascending':'descending'):'none')});
 }
 all$('#repos th').forEach(function(th){th.addEventListener('click',function(){var k=th.getAttribute('data-k');if(k===sortKey)dir=-dir;else{sortKey=k;dir=['n','o','lg','md','st','fr','lc'].indexOf(k)>=0?1:-1}render()})});
@@ -433,8 +439,8 @@ more.addEventListener('click',function(){limit+=PAGE;render()});every.addEventLi
 
 /* Downloads: the plan as CSV, all of it or this view (spreadsheet formulas defused) */
 function cell(v){if(v===null||v===undefined)return'';var s=String(v);if(/^[=+\\-@\\t\\r]/.test(s)&&!/^-?\\d+(\\.\\d+)?$/.test(s))s="'"+s;return /[",\\n\\r]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s}
-function csv(list,name){var head=['Repository','Organization','Connection','Language','Lines of code','Commits','Commits per week','Authors','Last commit','Change frequency','Criticality','Fusion scans','10K units','Model','Credits','Status'];
-var lines=[head.join(',')].concat(list.map(function(r){return[r.n,r.o,r.c,r.lg,r.loc,r.cm,r.cw,r.au,r.lc,r.fq,r.cr,r.sc,r.un,r.md,r.cd,r.st].map(cell).join(',')}));
+function csv(list,name){var head=['Repository','Organization','Connection','Language','Lines of code','Commits','Commits per week','Authors','Developers (90 days)','Last commit','Change frequency','Criticality','Fusion scans','10K units','Model','Credits','Status'];
+var lines=[head.join(',')].concat(list.map(function(r){return[r.n,r.o,r.c,r.lg,r.loc,r.cm,r.cw,r.au,r.dv,r.lc,r.fq,r.cr,r.sc,r.un,r.md,r.cd,r.st].map(cell).join(',')}));
 if(typeof Blob==='undefined'||!W.URL)return;var url=W.URL.createObjectURL(new Blob(['\\ufeff'+lines.join('\\r\\n')],{type:'text/csv'}));var a=D.createElement('a');a.href=url;a.download=name;D.body.appendChild(a);a.click();a.remove();setTimeout(function(){W.URL.revokeObjectURL(url)},1000)}
 function plan(){return rows.slice().sort(function(a,b){return(b.cd||0)-(a.cd||0)||cmp(a.n,b.n)})}
 function on(id,f){var el=D.getElementById(id);if(el)el.addEventListener('click',f)}

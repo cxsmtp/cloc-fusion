@@ -26,6 +26,7 @@ export const CSV_COLUMNS = [
   ['Commits per week', (r) => r.commitsPerWeek],
   ['Commits per month', (r) => r.commitsPerMonth],
   ['Active authors', (r) => r.authors],
+  ['Developers (90 days)', (r) => r.devs90],
   ['Last commit', (r) => r.lastCommitAt],
   ['Change frequency', (r) => r.frequencyLabel],
   ['Criticality', (r) => r.criticality],

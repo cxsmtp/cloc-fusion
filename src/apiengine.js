@@ -21,7 +21,7 @@ const DAY = 86400000;
 export async function analyzeRepoApi(repo, { session, conn, workDir, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, maxArchiveBytes, countCategories, locBasis, now = Date.now(), onPhase = () => {} }) {
   const { provider, api } = session;
   if (!provider.archive || !api) throw new Error(`the git-free engine does not support ${provider.label}; install git (or use --engine git)`);
-  if (!repo.defaultBranch) return { empty: true, commits: 0, authors: 0, windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
+  if (!repo.defaultBranch) return { empty: true, commits: 0, authors: 0, devs90: 0, devIds90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
   const since = new Date(now - windowDays * DAY).toISOString();
 
   onPhase('history');
@@ -67,6 +67,8 @@ export async function analyzeRepoApi(repo, { session, conn, workDir, windowDays 
     branch: repo.defaultBranch,
     commits: stats.commits,
     authors: stats.authors,
+    devs90: stats.devs90,
+    devIds90: stats.devIds90,
     weekly: stats.weekly,
     lastCommitAt: stats.lastCommitAt,
     windowDays: Math.round(effectiveWindow * 10) / 10,

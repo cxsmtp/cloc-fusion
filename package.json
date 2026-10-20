@@ -17,7 +17,7 @@
     "node": ">=18.17"
   },
   "scripts": {
-    "test": "node --test test/fusion.test.js test/loc.test.js test/providers.test.js test/scan.test.js test/apiengine.test.js test/security.test.js test/version.test.js test/ui.test.js test/standalone.test.js",
+    "test": "node --test test/fusion.test.js test/loc.test.js test/providers.test.js test/scan.test.js test/apiengine.test.js test/security.test.js test/version.test.js test/ui.test.js test/standalone.test.js test/developers.test.js",
     "bench": "node bench/bench.js",
     "build": "node scripts/build-binary.mjs",
     "build:standalone": "node scripts/build-standalone.mjs",
