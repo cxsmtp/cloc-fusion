@@ -80,6 +80,8 @@ export async function readZipFile(path, { onEntry, onFile, maxFileBytes = 2 * 10
     const cdOffset = tail.readUInt32LE(eocd + 16);
     if (count === 0xffff || cdOffset === 0xffffffff) throw new Error('zip64 archives are not supported: use the git engine for this repository');
     if (cdOffset + cdSize > size) throw new Error('corrupt zip archive');
+    // The directory's size comes from the file itself: bound it before allocating (a million entries fit well within).
+    if (cdSize > 256 * 1024 * 1024) throw new Error('zip central directory is too large: use the git engine for this repository');
     const cd = Buffer.alloc(cdSize);
     await fh.read(cd, 0, cdSize, cdOffset);
     let p = 0;

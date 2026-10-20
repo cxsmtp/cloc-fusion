@@ -5,6 +5,7 @@ import { stdin, stdout } from 'node:process';
 import { existsSync } from 'node:fs';
 import { PROVIDERS } from './providers/index.js';
 import { DEFAULTS, loadConfig, saveConfig, resolveCredentials } from './config.js';
+import { saveToken } from './credentials.js';
 import { FREQUENCIES, suggestedScans } from './fusion.js';
 import { banner } from './term.js';
 
@@ -138,6 +139,7 @@ async function addConnection(p, existingNames) {
   const pi = await p.choose('Which Git platform?', PROVIDERS.map((x) => x.label));
   const provider = PROVIDERS[pi];
   const conn = { provider: provider.id };
+  let pendingToken = '';
 
   if (provider.id === 'generic') {
     console.log(dim('\nPaste clone URLs (https://…), one per line; an empty line ends the list.'));
@@ -170,7 +172,7 @@ async function addConnection(p, existingNames) {
     const where = await p.choose('Where should the token come from each time the tool runs?', [
       'An environment variable (recommended: nothing secret is written to disk)',
       'A command that prints it (a password manager or vault CLI, e.g. `op read op://vault/git/token`)',
-      'Store it in the configuration file (owner-only permissions)',
+      'Save it in your profile (~/.cloc-fusion/credentials.json, owner-only), not in the configuration file',
     ]);
     if (where === 0) {
       const name = await p.ask('Environment variable name', ENV_NAMES[provider.id]);
@@ -183,7 +185,9 @@ async function addConnection(p, existingNames) {
     } else if (where === 1) {
       conn.auth.token = { command: await p.ask('Command') };
     } else {
-      conn.auth.token = { value: await p.secret('Token') };
+      // Kept out of the configuration file, which is often shared or committed; saved once the connection has a name.
+      pendingToken = await p.secret('Token');
+      conn.auth.token = { saved: true };
     }
   }
 
@@ -197,6 +201,7 @@ async function addConnection(p, existingNames) {
   let name = `${provider.id}-${host}`.replace(/[^\w.-]+/g, '-');
   for (let i = 2; existingNames.has(name); i++) name = `${provider.id}-${host}-${i}`;
   conn.name = await p.ask('A name for this connection', name);
+  if (pendingToken) await saveToken(conn.name, pendingToken);
 
   // Test, then pick organizations.
   if (provider.id === 'generic') {
@@ -212,7 +217,10 @@ async function addConnection(p, existingNames) {
     console.log(green(`\n✓ Connected${who ? ` as ${who}` : ''}.`));
   } catch (err) {
     console.log(red(`\n✗ Could not connect: ${err.message}`));
-    if (!(await p.yes('Keep this connection anyway (fix the token later)?', false))) return null;
+    if (!(await p.yes('Keep this connection anyway (fix the token later)?', false))) {
+      if (pendingToken) await saveToken(conn.name, '');
+      return null;
+    }
   }
 
   let orgs = null;
