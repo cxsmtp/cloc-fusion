@@ -67,7 +67,7 @@ The web app, the standalone HTML page, browser sign-in, and choosing your Fusion
 ### Verification
 - **Checkmarx One** (SAST, SCA, KICS, secret detection, API security; containers and AI supply chain on a later scan): the release scan found 1 critical, 10 high, 11 medium and 14 low, down from 3 critical and 15 low before the fixes listed under *Security*. Every finding is fixed or by design, with the reason in the [security and performance report](docs/SECURITY-REPORT.md).
 - **Open-source components:** 0 known vulnerabilities (Checkmarx SCA, `npm audit`). No runtime dependencies; the optional Anthropic SDK and its 7 dependencies are listed in the [SBOM](docs/sbom.cdx.json).
-- **Performance** (10,000 repositories, 4 CPUs): API engine 10,000 measured, **0 failed**, 47,451 requests with 681 injected errors, 44.5 s (225 repos/s, from 135), 299 MB; report built in 0.12 s and written in 1.8 s; line counting 132 MB/s per core.
+- **Performance** (10,000 repositories, 4 CPUs): API engine 10,000 measured, **0 failed**, 47,451 requests with 681 injected errors, 44.5 s (225 repos/s, from 135), 299 MB; git engine 10,000 measured, **0 failed**, 5.2 min (from 9.3–12.7), 145 MB; report built in 0.12 s and written in 1.8 s; line counting 132 MB/s per core.
 - **Tests:** 65 passing on Node 18 and 22, on Windows, macOS and Linux.
 
 ## [1.2.1] - 2026-10-15

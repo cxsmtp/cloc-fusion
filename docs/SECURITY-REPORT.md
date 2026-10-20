@@ -109,9 +109,9 @@ GitHub-compatible mock API (no network). Reproduce with `node bench/bench.js`; t
 | API engine: throughput | 135 repos/s | **225 repos/s** |
 | API engine: peak memory | 310 MB | 299 MB |
 | Token sent to the download host | 0 times | 0 times |
-| Git engine: repositories measured / failed | 10,000 / **0** | being re-measured |
-| Git engine: time | 9.3–12.7 min | being re-measured |
-| Git engine: peak memory | 138–194 MB | being re-measured |
+| Git engine: repositories measured / failed | 10,000 / **0** | 10,000 / **0** |
+| Git engine: time | 9.3–12.7 min | **5.2 min** (32 repos/s) |
+| Git engine: peak memory | 138–194 MB | 145 MB |
 | Report: build / write all formats | 0.33 s / 3.3 s | **0.12 s / 1.8 s** |
 | Line counting, one core | 77–110 MB/s | **132 MB/s** |
 | HTML report with 10,000 rows in Chromium | loads in 0.57 s | loads in 0.57 s (not re-measured) |

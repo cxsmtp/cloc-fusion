@@ -47,8 +47,8 @@ The report also shows totals, the number of credit bundles you need, and the **c
 |---|---|
 | **Checkmarx One** (SAST, SCA, IaC, secrets, API security, containers, AI supply chain) | ✅ No open exploitable finding: each one fixed, or by design with the reason given |
 | **Open-source components** | ✅ 0 known vulnerabilities (Checkmarx SCA and `npm audit`, every version) · no runtime dependencies · [SBOM](docs/sbom.cdx.json) |
-| **Scale** | ✅ 10,000 repositories, 0 failures, through 681 injected API errors |
-| **Speed** (1.3.0, 4 CPUs) | API engine 225 repos/s · line counting 132 MB/s per core · 10,000-repo report in 1.8 s |
+| **Scale** | ✅ 10,000 repositories, 0 failures, on both engines; the API engine through 681 injected errors |
+| **Speed** (1.3.0, 4 CPUs) | 10,000 repos in 44.5 s (API engine) or 5.2 min (git engine) · line counting 132 MB/s per core · 10,000-repo report in 1.8 s |
 | **Tests** | ✅ 66 tests on Node 18 and 22, Windows, macOS and Linux |
 
 The full scan history, every finding and what was done about it, the bill of materials and the benchmark by version are in the [security and performance report](docs/SECURITY-REPORT.md). Each version's status is also in the [CHANGELOG](CHANGELOG.md).
