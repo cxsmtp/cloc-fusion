@@ -4,6 +4,10 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-10-21
+
+Security fixes from the Checkmarx One scans, a bill of materials with every release, and the security and performance report.
+
 ### Security
 - The "create a token" link is only ever an http(s) URL, whatever the configured API address holds (Checkmarx).
 - The setup wizard saves a pasted token to the owner-only `~/.cloc-fusion/credentials.json`, as the web app does, instead of the configuration file, so the configuration file can be shared (Checkmarx).
@@ -201,7 +205,8 @@ First release.
 - **Checkmarx One:** a scan was started but did not complete; see 1.3.0.
 - **Performance:** not benchmarked at scale; see 1.1.0.
 
-[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/cxsmtp/cloc-fusion/compare/e4bc001...v1.2.0

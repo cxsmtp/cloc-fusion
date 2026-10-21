@@ -4,7 +4,7 @@ What has been checked in cloc-fusion, with what, and what was found. Updated wit
 the [CHANGELOG](../CHANGELOG.md) has the same status per version, and [SECURITY.md](../SECURITY.md)
 has the threat model and every protection.
 
-**Status for the current code (after 1.3.0):**
+**Status for 1.3.1, the current release:**
 
 | Check | Result |
 |---|---|
@@ -25,8 +25,8 @@ workflows), secret detection, API security, containers and AI supply chain secur
 | 2026-10-15 | 1.0.0 | SAST, SCA, KICS | | | | | | The scan did not complete |
 | 2026-10-20 | 1.3.0 candidate | SAST, SCA, KICS | 3 | 10 | 11 | 15 | 39 | Every finding triaged; the exploitable ones fixed in 1.3.0 |
 | 2026-10-20 | 1.3.0 release | + API security | 1 | 10 | 11 | 14 | 36 | Both fixed criticals gone; 1 new finding fixed after release |
-| 2026-10-20 | After 1.3.0 | + containers, AISC | 1 | 9 | 12 | 14 | 36 | No new findings; 2 confirmed findings fixed after |
-| 2026-10-20 | **Current code** (627c309) | SAST, SCA, KICS, secrets, API security | **1** | **9** | **10** | **14** | **34** | **No new findings; the 2 fixed findings gone; 0 SCA findings. Every remaining finding is by design (below)** |
+| 2026-10-20 | Between releases | + containers, AISC | 1 | 9 | 12 | 14 | 36 | No new findings; 2 confirmed findings fixed after |
+| 2026-10-20 | **1.3.1** (627c309; later commits change only documentation and the release workflow) | SAST, SCA, KICS, secrets, API security | **1** | **9** | **10** | **14** | **34** | **No new findings; the 2 fixed findings gone; 0 SCA findings. Every remaining finding is by design (below)** |
 
 Counts are what the scanner reports, by design findings included: a static analyser flags every
 place where a configured address is requested or a token is stored, and those are what the tool
@@ -41,9 +41,9 @@ is for. What matters is the outcome column and the triage below.
 | High | Prototype pollution in the web app's and the standalone page's per-connection state | Prototype-free maps (1.3.0) |
 | High | Settings import took any key | Known keys only, type-checked, 1 MB limit (1.3.0) |
 | High / medium | Content Security Policies | The web app runs only its own script, by a per-response nonce; the standalone page connects to https servers only (1.3.0) |
-| High / medium | The "create a token" link built from the configured API address | Only ever an http(s) URL (after 1.3.0) |
-| Medium | The setup wizard wrote a pasted token into the configuration file | Saved to the owner-only credentials file instead (after 1.3.0) |
-| Medium | The zip reader sized a buffer from the archive's own header | Bounded before allocating (after 1.3.0) |
+| High / medium | The "create a token" link built from the configured API address | Only ever an http(s) URL (1.3.1) |
+| Medium | The setup wizard wrote a pasted token into the configuration file | Saved to the owner-only credentials file instead (1.3.1) |
+| Medium | The zip reader sized a buffer from the archive's own header | Bounded before allocating (1.3.1) |
 | Medium / low | SHA-1 for work-folder names; the update repository override; the web app key comparison | SHA-256; validated `owner/name`; constant-time comparison (1.3.0) |
 
 ### By design
@@ -91,8 +91,8 @@ the executables), both **0 known vulnerabilities**; GitHub Actions `actions/chec
 `softprops/action-gh-release` (v2).
 
 **How it is checked:** Checkmarx One SCA on every scan above (0 findings), and `npm audit` on
-each release's own lockfile (0 vulnerabilities in 1.0.0, 1.1.0, 1.2.0, 1.2.1, 1.3.0 and the
-current code). From now on the release workflow runs `npm audit` and stops the release on any
+each release's own lockfile (0 vulnerabilities in 1.0.0, 1.1.0, 1.2.0, 1.2.1, 1.3.0 and
+1.3.1). From now on the release workflow runs `npm audit` and stops the release on any
 high or critical vulnerability.
 
 ## Performance
