@@ -4,7 +4,7 @@
 // time), so any copy can say exactly what it is.
 import { readFileSync } from 'node:fs';
 
-export const VERSION = '1.3.0';
+export const VERSION = '1.3.1';
 
 /* global __CLOC_FUSION_BUILD__, __CLOC_FUSION_CHANGELOG__ */
 const injected = (name) => {
