@@ -4,6 +4,18 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-10-26
+
+No repository left out.
+
+### Changed
+- **"Every organization" now means every repository the sign-in can reach.** On GitHub and GitLab a scan set to `all` (*Everything this token can see*) also covers your own repositories, those shared with you as a collaborator, and those of organizations the platform doesn't list (on GitHub, `/user/repos` with every affiliation; on GitLab, every project you are a member of). Until now personal repositories were left out of `all`, so a personal account's repositories never appeared. Each repository is counted once and grouped under its real owner. `"includePersonal": false` scans the organizations only. Applies to the CLI, the web app and the standalone page.
+- Repositories from *My own repositories* are grouped under your account name instead of `@me`.
+- The setup wizard offers to include your own and shared repositories, yes by default.
+
+### Verification
+- **Tests:** 67 passing, including a scan where a personal repository list overlaps an organization's (each repository counted once) and one with `includePersonal: false`.
+
 ## [1.3.1] - 2026-10-21
 
 Security fixes from the Checkmarx One scans, a bill of materials with every release, and the security and performance report.
@@ -205,7 +217,8 @@ First release.
 - **Checkmarx One:** a scan was started but did not complete; see 1.3.0.
 - **Performance:** not benchmarked at scale; see 1.1.0.
 
-[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.1...HEAD
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.2...HEAD
+[1.3.2]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.0...v1.2.1

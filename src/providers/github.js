@@ -47,7 +47,9 @@ export default {
   },
 
   async listRepos(api, org) {
-    const path = org === '@me' ? '/user/repos?affiliation=owner&per_page=100' : `/orgs/${encodeURIComponent(org)}/repos?type=all&per_page=100`;
+    // '@all': every repository this sign-in can reach (owned, as a collaborator, or through an organization).
+    const path =
+      org === '@all' ? '/user/repos?affiliation=owner,collaborator,organization_member&per_page=100' : org === '@me' ? '/user/repos?affiliation=owner&per_page=100' : `/orgs/${encodeURIComponent(org)}/repos?type=all&per_page=100`;
     const list = await api.paginate(path);
     return list.map((r) => ({
       id: String(r.id),

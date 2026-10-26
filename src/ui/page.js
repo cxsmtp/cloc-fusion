@@ -333,7 +333,7 @@ function clientApp(boot) {
       'div',
       { class: 'field' },
       h('span', null, `${p.orgNoun}s to scan`),
-      h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: all, onchange: (e) => (set(['connections', i, 'orgs'], e.target.checked ? 'all' : list.length ? list : []), renderConnections()) }), `Every ${p.orgNoun} this sign-in can see`),
+      h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: all, onchange: (e) => (set(['connections', i, 'orgs'], e.target.checked ? 'all' : list.length ? list : []), renderConnections()) }), `Everything this sign-in can see: every ${p.orgNoun} and your own repositories`),
       all ? null : box,
       !all && found.length
         ? h(
@@ -465,7 +465,7 @@ function clientApp(boot) {
   function connectionCard(conn, i) {
     const p = providerOf(conn.provider);
     const st = status[conn.name];
-    const orgsText = conn.orgs === 'all' ? `every ${p.orgNoun}` : (conn.orgs || []).map((o) => (o === '@me' ? 'my own repositories' : o)).join(', ') || `no ${p.orgNoun}s yet`;
+    const orgsText = conn.orgs === 'all' ? `every ${p.orgNoun} and your own repositories` : (conn.orgs || []).map((o) => (o === '@me' ? 'my own repositories' : o)).join(', ') || `no ${p.orgNoun}s yet`;
     const card = h(
       'div',
       { class: `conn${st?.state === 'ok' ? ' ok' : ''}` },

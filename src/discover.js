@@ -3,11 +3,23 @@
 import { globToRegExp } from './languages.js';
 
 /** A connection's repositories in one organization, each with why it is skipped (or null). */
+/**
+ * What "every organization" means for a connection: every organization the sign-in lists, plus,
+ * where the platform can list it, every other repository it can reach (personal, collaborator,
+ * other namespaces) unless includePersonal is false. Duplicates are removed later (dedupeRepos).
+ */
+export function allOrgIds(listed, conn) {
+  const ids = listed.map((o) => o.id).filter((id) => id !== '@me');
+  if (conn.includePersonal !== false && listed.some((o) => o.id === '@me')) ids.push('@all');
+  return ids;
+}
+
 export function classifyRepos(cfg, conn, org, list, overrideFor) {
   const inc = (conn.include || []).map(globToRegExp);
   const exc = (conn.exclude || []).map(globToRegExp);
   return list.map((r) => {
-    const repo = { ...r, provider: conn.provider, connection: conn.name, org };
+    // Personal and cross-namespace listings are grouped under each repository's real owner.
+    const repo = { ...r, provider: conn.provider, connection: conn.name, org: org.startsWith('@') && r.fullName ? r.fullName.split('/')[0] : org };
     const o = overrideFor(repo);
     let skip = null;
     if (!cfg.includeArchived && repo.archived) skip = 'archived';

@@ -118,3 +118,22 @@ test('tar reader: long names, pax paths, and a decompression bomb guard', async 
   const bomb = gzipSync(Buffer.alloc(20 * 1024 * 1024));
   await assert.rejects(readTarGz(Readable.from([bomb]), { onEntry: () => true, onFile: () => {}, maxArchiveBytes: 1024 * 1024 }), /larger than/);
 });
+
+test('every organization includes personal repositories too, once each; includePersonal: false leaves them out', async (t) => {
+  const mock = await startMockGitHub({ orgs: 2, reposPerOrg: 3, personalRepos: 2 });
+  const work = await mkdtemp(join(tmpdir(), 'cf-api-'));
+  t.after(async () => {
+    await mock.close();
+    await rm(work, { recursive: true, force: true });
+  });
+  const report = await scan(config(mock), { workDir: work });
+  // 6 organization repositories + 2 personal; org0/repo0, also listed among the personal ones, counted once.
+  assert.equal(report.counts.discovered, 8);
+  assert.equal(report.counts.failed, 0);
+  assert.deepEqual(report.repos.filter((r) => r.org === 'bench').map((r) => r.fullName).sort(), ['bench/repo0', 'bench/repo1']);
+  assert.equal(report.repos.filter((r) => r.fullName === 'org0/repo0').length, 1);
+  assert.equal(report.repos.find((r) => r.fullName === 'org0/repo0').org, 'org0');
+  const cfg = config(mock);
+  cfg.connections[0].includePersonal = false;
+  assert.equal((await scan(cfg, { workDir: work })).counts.discovered, 6);
+});

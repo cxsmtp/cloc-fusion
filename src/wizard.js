@@ -231,7 +231,7 @@ async function addConnection(p, existingNames) {
         const picked = await p.many(`Which ${provider.orgNoun}s should be scanned? (${list.length} found)`, list);
         if (picked === 'all') {
           conn.orgs = 'all';
-          conn.includePersonal = list.some((o) => o.id === '@me') ? await p.yes('Include your personal repositories too?', false) : false;
+          conn.includePersonal = list.some((o) => o.id === '@me') ? await p.yes('Include your own repositories and those shared with you too?', true) : false;
         } else conn.orgs = picked;
         orgs = conn.orgs;
       } else console.log(dim(`  The token lists no ${provider.orgNoun}s.`));

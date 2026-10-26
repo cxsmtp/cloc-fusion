@@ -9,7 +9,7 @@ import { analyzeRepo, gitVersion } from './git.js';
 import { analyzeRepoApi } from './apiengine.js';
 import { pool } from './pool.js';
 import { buildReport, reprice, overrideMatcher } from './report/build.js';
-import { classifyRepos, dedupeRepos } from './discover.js';
+import { classifyRepos, dedupeRepos, allOrgIds } from './discover.js';
 
 export { VERSION } from './version.js';
 export { buildReport, reprice } from './report/build.js';
@@ -30,7 +30,7 @@ export async function orgsOf(conn, session) {
   if (Array.isArray(conn.orgs) && conn.orgs.length) return conn.orgs;
   if (conn.provider === 'generic') return [conn.name];
   const all = await session.provider.listOrgs(session.api, conn);
-  return all.map((o) => o.id).filter((id) => id !== '@me' || conn.includePersonal);
+  return allOrgIds(all, conn);
 }
 
 

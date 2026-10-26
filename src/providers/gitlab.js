@@ -35,7 +35,8 @@ export default {
   },
 
   async listRepos(api, org) {
-    const path = org === '@me' ? '/projects?owned=true&per_page=100&simple=false' : `/groups/${encodeURIComponent(org)}/projects?include_subgroups=true&with_shared=false&per_page=100`;
+    // '@all': every project this sign-in is a member of, in any namespace.
+    const path = org === '@all' ? '/projects?membership=true&per_page=100&simple=false' : org === '@me' ? '/projects?owned=true&per_page=100&simple=false' : `/groups/${encodeURIComponent(org)}/projects?include_subgroups=true&with_shared=false&per_page=100`;
     const list = await api.paginate(path);
     return list.map((p) => ({
       id: String(p.id),

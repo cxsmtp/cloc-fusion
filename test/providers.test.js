@@ -39,6 +39,13 @@ test('GitHub: organizations and repositories, following Link pagination', async 
   assert.equal(repos[2].fork, true);
   assert.equal(repos[2].empty, true);
   assert.equal(seen[0].headers.Authorization, 'Bearer T');
+  // "Every organization" also lists everything else the sign-in can reach.
+  const { allOrgIds } = await import('../src/discover.js');
+  assert.deepEqual(allOrgIds(orgs, {}), ['acme', 'beta', '@all']);
+  assert.deepEqual(allOrgIds(orgs, { includePersonal: false }), ['acme', 'beta']);
+  assert.deepEqual(allOrgIds([{ id: 'ws' }], {}), ['ws'], 'platforms without a personal listing are unchanged');
+  await gh.listRepos(api, '@all').catch(() => {});
+  assert.match(seen.at(-1).url, /\/user\/repos\?affiliation=owner,collaborator,organization_member&per_page=100$/);
   assert.equal(gh.gitAuthHeader({}, { token: 'T' }), `Basic ${Buffer.from('x-access-token:T').toString('base64')}`);
 });
 
