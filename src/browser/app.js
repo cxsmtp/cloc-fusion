@@ -5,7 +5,7 @@
 import { PROVIDERS, providerOf } from '../providers/index.js';
 import { tokenPageUrl } from '../tokenpages.js';
 import { overrideMatcher, buildReport, reprice } from '../report/build.js';
-import { classifyRepos, dedupeRepos } from '../discover.js';
+import { classifyRepos, dedupeRepos, allOrgIds } from '../discover.js';
 import { measureRepo } from './engine.js';
 import { pool } from '../pool.js';
 import { toHtml } from '../report/html.js';
@@ -239,7 +239,7 @@ function orgsEditor(conn, i) {
     'div',
     { class: 'field' },
     h('span', null, `${p.orgNoun}s to scan`),
-    h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: all, onchange: (e) => (set(['connections', i, 'orgs'], e.target.checked ? 'all' : []), renderConnections()) }), `Every ${p.orgNoun} this token can see`),
+    h('label', { class: 'toggle' }, h('input', { type: 'checkbox', checked: all, onchange: (e) => (set(['connections', i, 'orgs'], e.target.checked ? 'all' : []), renderConnections()) }), `Everything this token can see: every ${p.orgNoun} and your own repositories`),
     all ? null : h('div', { class: 'tags' }, list.map((o) => h('span', { class: 'tag' }, o === '@me' ? 'my own' : o, h('button', { type: 'button', 'aria-label': `Remove ${o}`, onclick: () => (set(['connections', i, 'orgs'], list.filter((x) => x !== o)), renderConnections()) }, '×'))), input),
     !all && found.length
       ? h(
@@ -284,7 +284,7 @@ const renderConnections = guarded(function renderConnections() {
     ...cfg.connections.map((conn, i) => {
       const p = providerOf(conn.provider);
       const isOpen = open[i] ?? status[conn.name]?.state !== 'ok';
-      const orgs = conn.orgs === 'all' ? `every ${p.orgNoun}` : Array.isArray(conn.orgs) && conn.orgs.length ? conn.orgs.map((o) => (o === '@me' ? 'my own repositories' : o)).join(', ') : `no ${p.orgNoun}s yet`;
+      const orgs = conn.orgs === 'all' ? `every ${p.orgNoun} and your own repositories` : Array.isArray(conn.orgs) && conn.orgs.length ? conn.orgs.map((o) => (o === '@me' ? 'my own repositories' : o)).join(', ') : `no ${p.orgNoun}s yet`;
       return h(
         'div',
         { class: `conn${status[conn.name]?.state === 'ok' ? ' ok' : ''}` },
@@ -510,7 +510,7 @@ async function runScan(limit) {
     if (!session) continue;
     let orgs = conn.orgs;
     try {
-      if (orgs === 'all' || !Array.isArray(orgs) || !orgs.length) orgs = (await session.provider.listOrgs(session.api, conn)).map((o) => o.id).filter((id) => id !== '@me');
+      if (orgs === 'all' || !Array.isArray(orgs) || !orgs.length) orgs = allOrgIds(await session.provider.listOrgs(session.api, conn), conn);
     } catch (err) {
       problems.push({ connection: conn.name, error: `could not list ${session.provider.orgNoun}s: ${err.message}` });
       log(`✗ ${conn.name}: ${err.message}`);
@@ -683,7 +683,7 @@ async function importSettings(file) {
     if (Array.isArray(src.connections)) {
       for (const c of src.connections) {
         if (!c || !SUPPORTED.includes(c.provider) || !c.name || cfg.connections.some((x) => x.name === c.name)) continue;
-        cfg.connections.push({ name: String(c.name), provider: c.provider, apiUrl: typeof c.apiUrl === 'string' ? c.apiUrl : undefined, orgs: c.orgs === 'all' ? 'all' : Array.isArray(c.orgs) ? c.orgs.map(String) : [], include: c.include, exclude: c.exclude, auth: { method: 'pat' } });
+        cfg.connections.push({ name: String(c.name), provider: c.provider, apiUrl: typeof c.apiUrl === 'string' ? c.apiUrl : undefined, orgs: c.orgs === 'all' ? 'all' : Array.isArray(c.orgs) ? c.orgs.map(String) : [], ...(c.includePersonal === false ? { includePersonal: false } : {}), include: c.include, exclude: c.exclude, auth: { method: 'pat' } });
       }
     }
     save();

@@ -141,6 +141,8 @@ You can change any of this:
 | Bitbucket Data Center | HTTP access token | Project read, Repository read |
 | Any other Git | None, username + token, or bearer token | Read access to the clone URLs |
 
+**`all` means every repository.** With `"orgs": "all"` (*Everything this token can see* in the app and the page) a scan covers every organization the sign-in lists and, on GitHub and GitLab, every other repository it can reach: your own, those shared with you as a collaborator, and those of organizations that don't appear in the list. Each repository is counted once and grouped under its real owner. Set `"includePersonal": false` to scan the organizations only. Picking organizations one by one scans just those (*My own repositories* adds the ones you own).
+
 **Okta and other SSO.** No platform accepts an Okta token on its API directly: Okta signs you in to the platform, and the platform issues the credential the tool uses.
 - **GitHub with SAML SSO:** authorize the token for each organization (*Configure SSO → Authorize*), or use `gh auth login`.
 - **Azure DevOps with Entra ID federated to Okta:** choose `az login`. It opens your Okta sign-in, and the tool fetches a fresh token on every run.
@@ -219,7 +221,7 @@ Reports are written to `cloc-fusion-output/`:
 | `exclude` / `include` | [] | Path globs inside repositories, e.g. `**/test/**` |
 | `maxFileBytes` / `maxArchiveBytes` | 2 MB / 4 GB | Size limits |
 | `repoTimeoutMinutes` | 30 | Per-repository limit |
-| `connections[]` | | `name`, `provider`, `apiUrl`, `auth`, `orgs` (list or `all`), `include`/`exclude` (repository globs) |
+| `connections[]` | | `name`, `provider`, `apiUrl`, `auth`, `orgs` (list or `all`), `includePersonal`, `include`/`exclude` (repository globs) |
 | `fusion` | | `periodMonths`, `models[] {id, name, creditsPer10k}`, `byFrequency`, `byCriticality`, `combine` |
 | `totals` | 0% / 10,000 | `extraPercent`, `bundleCredits` |
 | `overrides` | | `{"<repo or glob>": {criticality, scans, model, loc, exclude}}` |

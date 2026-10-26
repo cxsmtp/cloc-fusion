@@ -46,7 +46,7 @@ function repoFiles(top, n, lines) {
  * Start the mock. Returns { url, close, stats }. Repository i of organization o is
  * `org{o}/repo{i}`; its size and activity cycle through a few profiles so totals are predictable.
  */
-export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0, latencyMs = 0, token = randomBytes(16).toString('hex'), cors = false, codeloadCors = true } = {}) {
+export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, personalRepos = 0, faultRate = 0, latencyMs = 0, token = randomBytes(16).toString('hex'), cors = false, codeloadCors = true } = {}) {
   const PROFILES = [
     { files: 5, lines: 100, commitsPerWeek: 7 },
     { files: 20, lines: 600, commitsPerWeek: 2 },
@@ -56,6 +56,19 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
   const tarballs = PROFILES.map((p, i) => gzipSync(tar(repoFiles(`acme-repo-p${i}`, p.files, p.lines))));
   const stats = { requests: 0, faults: 0, tokenLeaks: 0, unauthorized: 0 };
   const profileOf = (o, i) => PROFILES[(o * reposPerOrg + i) % PROFILES.length];
+  // Repositories are owned by org<n>, or by the signed-in user "bench" (personal: index orgs).
+  const ownerIndex = (owner) => (owner === 'bench' ? orgs : Number(owner.slice(3)));
+  const repoOf = (owner, i) => ({
+    id: ownerIndex(owner) * 1e6 + i,
+    name: `repo${i}`,
+    full_name: `${owner}/repo${i}`,
+    owner: { login: owner },
+    clone_url: `https://git.invalid/${owner}/repo${i}.git`,
+    html_url: `https://github.invalid/${owner}/repo${i}`,
+    default_branch: 'main',
+    size: 100,
+    created_at: new Date(now - 800 * DAY).toISOString(),
+  });
   let codeloadUrl = '';
   const faulted = new Set();
   // A stable pseudo-random number in [0, 1) for a string (FNV-1a).
@@ -126,31 +139,24 @@ export async function startMockGitHub({ orgs = 2, reposPerOrg = 3, faultRate = 0
     let m;
     if (p === '/user') return res.end(JSON.stringify({ login: 'bench' }));
     if (p === '/user/orgs') return page(res, url, Array.from({ length: orgs }, (_, o) => ({ login: `org${o}` })));
-    if ((m = p.match(/^\/orgs\/org(\d+)\/repos$/))) {
-      const o = Number(m[1]);
-      const list = Array.from({ length: reposPerOrg }, (_, i) => ({
-        id: o * 1e6 + i,
-        name: `repo${i}`,
-        full_name: `org${o}/repo${i}`,
-        clone_url: `https://git.invalid/org${o}/repo${i}.git`,
-        html_url: `https://github.invalid/org${o}/repo${i}`,
-        default_branch: 'main',
-        size: 100,
-        created_at: new Date(now - 800 * DAY).toISOString(),
-      }));
+    if ((m = p.match(/^\/orgs\/(org\d+)\/repos$/))) return page(res, url, Array.from({ length: reposPerOrg }, (_, i) => repoOf(m[1], i)));
+    if (p === '/user/repos') {
+      // Personal repositories; with organization_member, an organization's repository shows up here too.
+      const list = Array.from({ length: personalRepos }, (_, i) => repoOf('bench', i));
+      if (personalRepos && orgs && /organization_member/.test(url.searchParams.get('affiliation') || '')) list.push(repoOf('org0', 0));
       return page(res, url, list);
     }
-    if ((m = p.match(/^\/repos\/org(\d+)\/repo(\d+)\/commits$/))) {
-      const prof = profileOf(Number(m[1]), Number(m[2]));
+    if ((m = p.match(/^\/repos\/(org\d+|bench)\/repo(\d+)\/commits$/))) {
+      const prof = profileOf(ownerIndex(m[1]), Number(m[2]));
       const since = url.searchParams.get('since');
       return page(res, url, commitsFor(prof, since ? Date.parse(since) : 0));
     }
-    if ((m = p.match(/^\/repos\/org(\d+)\/repo(\d+)\/languages$/))) {
-      const prof = profileOf(Number(m[1]), Number(m[2]));
+    if ((m = p.match(/^\/repos\/(org\d+|bench)\/repo(\d+)\/languages$/))) {
+      const prof = profileOf(ownerIndex(m[1]), Number(m[2]));
       return res.end(JSON.stringify({ JavaScript: prof.files * prof.lines * 45, Markdown: 400 }));
     }
-    if ((m = p.match(/^\/repos\/org(\d+)\/repo(\d+)\/tarball\/main$/))) {
-      const idx = PROFILES.indexOf(profileOf(Number(m[1]), Number(m[2])));
+    if ((m = p.match(/^\/repos\/(org\d+|bench)\/repo(\d+)\/tarball\/main$/))) {
+      const idx = PROFILES.indexOf(profileOf(ownerIndex(m[1]), Number(m[2])));
       res.writeHead(302, { location: `${codeloadUrl}/p${idx}.tar.gz?token=signed` });
       return res.end();
     }
