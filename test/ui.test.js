@@ -184,10 +184,12 @@ test('the HTML report recomputes credits in the page exactly as the engine does'
   assert.equal(pageTotal, engine.credits.total.toLocaleString('en-US', { maximumFractionDigits: 0 }));
   assert.notEqual(engine.credits.total, report.credits.total);
   assert.match(els['hero-pills'].innerHTML, new RegExp(`${engine.credits.bundles.toLocaleString('en-US')} bundles of 5,000`));
-  // The repository table offers the model, scans and criticality per repository.
+  // The repository table offers the model and scans per repository; criticality is not offered
+  // (a saved choice still counts, as above), nor are its section and the cadence tie-break.
   assert.match(els.tbody.innerHTML, /data-pick="m"/);
   assert.match(els.tbody.innerHTML, /data-pick="s"/);
-  assert.match(els.tbody.innerHTML, /data-pick="c"/);
+  assert.doesNotMatch(els.tbody.innerHTML, /data-pick="c"/);
+  assert.doesNotMatch(html, /By criticality|If cadences disagree|data-k="cr"/);
   // Names typed into the page are escaped.
   const evil = buildReport(normalizeConfig({ fusion: { models: [{ id: 'x', name: '<img src=x onerror=alert(1)>', creditsPer10k: 1 }] } }), repos.slice(0, 2));
   const h2 = toHtml(evil);

@@ -4,6 +4,13 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-11-05
+
+A simpler pricing screen for new customers.
+
+### Changed
+- **Criticality is no longer shown.** The *By criticality* section, the *If cadences disagree* choice and the criticality column in repository rules are gone from the web app and the standalone page, and the *By criticality* block, the tie-break and the per-repository criticality picker from the HTML report: new customers price by change frequency and per repository. A configuration that already sets `byCriticality` or a repository's `criticality` is still priced the same, and the CSV keeps its Criticality column.
+
 ## [1.4.0] - 2026-11-05
 
 Minified and generated code sized the way Checkmarx sizes it, and your choice whether to count minified files.
@@ -234,7 +241,8 @@ First release.
 - **Checkmarx One:** a scan was started but did not complete; see 1.3.0.
 - **Performance:** not benchmarked at scale; see 1.1.0.
 
-[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.0...v1.3.1

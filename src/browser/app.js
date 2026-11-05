@@ -10,7 +10,7 @@ import { measureRepo } from './engine.js';
 import { pool } from '../pool.js';
 import { toHtml } from '../report/html.js';
 import { toCsv, toContributorsCsv } from '../report/csv.js';
-import { FREQUENCIES, CRITICALITIES, suggestedScans } from '../fusion.js';
+import { FREQUENCIES, suggestedScans } from '../fusion.js';
 import { UI_DEFAULTS } from '../ui/defaults.js';
 import { VERSION } from '../version.js';
 
@@ -357,7 +357,6 @@ const renderPricing = guarded(function renderPricing() {
       'div',
       { class: 'grid' },
       field('Projection period (months)', num(['fusion', 'periodMonths'], { min: 1, max: 60, after: () => (renderPricing(), after()) })),
-      field('If cadences disagree', seg(['fusion', 'combine'], [['higher', 'Higher wins'], ['frequency', 'Frequency'], ['criticality', 'Criticality']], after)),
       field('Extra credits on top (%)', num(['totals', 'extraPercent'], { max: 500, step: 0.5, after })),
       field('Credits per bundle', num(['totals', 'bundleCredits'], { min: 1, after })),
     ),
@@ -411,30 +410,6 @@ const renderPricing = guarded(function renderPricing() {
           ),
         ),
       ),
-      h(
-        'div',
-        null,
-        h('h3', { style: 'margin:0 0 8px;font-size:14px' }, 'By criticality (optional)'),
-        h(
-          'table',
-          null,
-          h('thead', null, h('tr', null, h('th', null, 'Criticality'), h('th', { class: 'n' }, 'Scans'), h('th', null, 'Model'))),
-          h(
-            'tbody',
-            null,
-            CRITICALITIES.map((c) =>
-              h(
-                'tr',
-                null,
-                h('td', null, `${c} ${c === 5 ? '(highest)' : c === 1 ? '(lowest)' : ''}`),
-                h('td', { class: 'n' }, h('input', { type: 'number', min: 0, placeholder: '—', title: 'Empty: not used', value: f.byCriticality?.[c]?.scans ?? '', style: 'max-width:100px;margin-left:auto', oninput: (e) => (set(['fusion', 'byCriticality', c], { ...(f.byCriticality?.[c] || {}), scans: e.target.value === '' ? null : Number(e.target.value) }), after()) })),
-                h('td', null, h('select', { onchange: (e) => (set(['fusion', 'byCriticality', c], { ...(f.byCriticality?.[c] || {}), model: e.target.value || null }), after()) }, modelOptions(f.byCriticality?.[c]?.model))),
-              ),
-            ),
-          ),
-        ),
-        h('small', { class: 'muted' }, 'Criticality comes from repository rules below. Which model a repository gets: the one its rule pins, else its change frequency’s (its criticality’s first when criticality wins), else the default model.'),
-      ),
     ),
   );
 });
@@ -458,7 +433,7 @@ const renderOverrides = guarded(function renderOverrides() {
       ? h(
           'table',
           null,
-          h('thead', null, h('tr', null, h('th', null, 'Repository or pattern'), h('th', null, 'Criticality'), h('th', { class: 'n' }, 'Scans'), h('th', null, 'Model'), h('th', null, 'Skip'), h('th', null, ''))),
+          h('thead', null, h('tr', null, h('th', null, 'Repository or pattern'), h('th', { class: 'n' }, 'Scans'), h('th', null, 'Model'), h('th', null, 'Skip'), h('th', null, ''))),
           h(
             'tbody',
             null,
@@ -475,7 +450,6 @@ const renderOverrides = guarded(function renderOverrides() {
                   after();
                   renderOverrides();
                 } })),
-                h('td', null, h('select', { onchange: (e) => ((o.criticality = e.target.value ? Number(e.target.value) : undefined), after()) }, h('option', { value: '' }, '—'), CRITICALITIES.map((c) => h('option', { value: c, selected: o.criticality === c }, String(c))))),
                 h('td', { class: 'n' }, h('input', { type: 'number', min: 0, value: o.scans ?? '', placeholder: 'auto', style: 'max-width:90px;margin-left:auto', oninput: (e) => ((o.scans = e.target.value === '' ? undefined : Number(e.target.value)), after()) })),
                 h('td', null, h('select', { onchange: (e) => ((o.model = e.target.value || undefined), after()) }, h('option', { value: '' }, '(default)'), (cfg.fusion.models || []).map((m) => h('option', { value: m.id, selected: o.model === m.id }, m.name || m.id)))),
                 h('td', null, h('input', { type: 'checkbox', checked: Boolean(o.exclude), onchange: (e) => ((o.exclude = e.target.checked || undefined), save()) })),
@@ -485,7 +459,7 @@ const renderOverrides = guarded(function renderOverrides() {
           ),
         )
       : h('p', { class: 'muted', style: 'margin:0 0 10px' }, 'No rules: every repository follows its change frequency.'),
-    h('button', { type: 'button', class: 'sm', style: 'margin-top:10px', onclick: () => ((cfg.overrides[`org/repo-${entries.length + 1}`] = { criticality: 5 }), save(), renderOverrides()) }, icon('plus'), 'Add a rule'),
+    h('button', { type: 'button', class: 'sm', style: 'margin-top:10px', onclick: () => ((cfg.overrides[`org/repo-${entries.length + 1}`] = {}), save(), renderOverrides()) }, icon('plus'), 'Add a rule'),
   );
 });
 
