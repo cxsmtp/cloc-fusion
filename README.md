@@ -5,7 +5,7 @@
 cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as many organizations as you have. For every repository it counts lines of code and recent commits. From the commit rate it suggests how often the repository needs a Fusion scan, then works out the credits your whole estate needs. The answer is an HTML, CSV, JSON and Markdown report.
 
 - **Or just one HTML file.** Open `cloc-fusion.html` in your browser: no install, no hosting, no server. It signs in, scans and prices right in the page.
-- **A web app, not a command line.** Run it and your browser opens: sign in through the browser, check the pricing, press *Run the Fusion scan*, and watch the credits add up.
+- **A web app, not a command line.** Run it and your browser opens: sign in through the browser, check the pricing, press *Calculate Fusion credits*, and watch the credits add up.
 - **On-premises.** It runs on your machine, next to your own GitHub Enterprise Server, GitLab, Azure DevOps Server or Bitbucket Data Center as well as the cloud platforms. Code, figures and tokens stay with you; there is no cloud service in between.
 - **You choose the models.** Pick which Fusion model each repository gets by change frequency, criticality or one by one, in the app or right in the HTML report, and every total follows.
 - **Nothing to install.** One file for Windows, macOS or Linux, with no runtime, git or packages needed.
@@ -17,7 +17,7 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
 
 ## Quick start
 
-**The quickest way: one HTML file.** Download [`cloc-fusion.html`](cloc-fusion.html) (also attached to every release) and double-click it. Add your connections, paste a token for each (*Create a token* opens the right page with the right permissions ticked), and press *Run the Fusion scan*. See [the standalone page](#the-standalone-page-one-html-file) for what it can and can't do compared with the app.
+**The quickest way: one HTML file.** Download [`cloc-fusion.html`](cloc-fusion.html) (also attached to every release) and double-click it. Add your connections, paste a token for each (*Create a token* opens the right page with the right permissions ticked), and press *Calculate Fusion credits*. See [the standalone page](#the-standalone-page-one-html-file) for what it can and can't do compared with the app.
 
 **The full app:**
 
@@ -25,7 +25,7 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
    `cloc-fusion-windows-x64.exe` · `cloc-fusion-macos-arm64` · `cloc-fusion-macos-x64` · `cloc-fusion-linux-x64` · `cloc-fusion-linux-arm64`
 2. **Run it.** Double-click the file, or run `cloc-fusion` with no arguments. The web app opens in your browser at `http://127.0.0.1:4747`, already set up with sensible defaults (two Fusion models, 20% headroom, bundles of 10,000 credits, the last 365 days of commits).
 3. **Sign in** to each connection with the *Sign in* button: GitHub through your browser, Microsoft Entra ID for Azure DevOps, or a token page opened with the right permissions ticked.
-4. **Run the Fusion scan.** Progress and the credit estimate update live; open the full report when it is done.
+4. **Calculate Fusion credits.** Progress and the credit estimate update live; open the full report when it is done.
 
 On macOS or Linux, run `chmod +x` on the file first. If you have Node.js 18+, you can also run it from source with `node bin/cloc-fusion.js`. Prefer the terminal? `cloc-fusion init` and `cloc-fusion scan` do the same without a browser.
 

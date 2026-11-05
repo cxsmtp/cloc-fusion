@@ -12,6 +12,7 @@ Minified and generated code sized the way Checkmarx sizes it, and your choice wh
 - **Count minified files, or exclude them.** A *Count minified files (\*.min.js, \*.min.css, \*-bundle.js)* checkbox in the web app and the standalone page, `"countMinified": true` in the configuration. Off by default (excluded, as before); on, they are counted and sized by the dense-file rule below. Dependencies, build output, source maps and lock files stay excluded either way.
 
 ### Changed
+- The main button reads **Calculate Fusion credits** (was *Run the Fusion scan*) in the web app and the standalone page: it sizes the estate and works out the credits, it doesn't start a Fusion scan.
 - **Dense files are counted by size, the way Checkmarx sizes them.** A file of at least 64 KB with more than 512 bytes per line of code (minified or generated code, often a whole program on one line) counts as `ceil(bytes / 40)` lines instead of its line count: a 300 KB one-line bundle is 7,680 lines, not 1. The rule catches minified code under any name; files named as minified follow the new *Count minified files* setting. The same in the git engine, the API engine and the standalone page.
 - **No file is dropped for its size.** A file over `maxFileBytes` (2 MB by default) is counted from its size, as a dense file, instead of being skipped.
 - Reports show how many files were counted by size: the HTML report's footer, a *Dense files (counted by size)* CSV column per repository, and `counts.denseFiles` in the JSON.

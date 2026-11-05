@@ -586,7 +586,7 @@ function renderPlan() {
       { style: 'display:grid;gap:10px;margin-top:14px' },
       running
         ? h('button', { type: 'button', class: 'big danger', onclick: () => (job.abort.abort(), toast('Stopping after the repositories in progress…')) }, icon('stop'), 'Stop the scan')
-        : h('button', { type: 'button', class: 'golden big', disabled: !allSignedIn(), title: allSignedIn() ? '' : 'Sign in to every connection first', onclick: () => runScan(Number(limit.value) || 0).catch((err) => ((job.running = false), toast(err.message, true), renderPlan())) }, icon('play'), 'Run the Fusion scan'),
+        : h('button', { type: 'button', class: 'golden big', disabled: !allSignedIn(), title: allSignedIn() ? '' : 'Sign in to every connection first', onclick: () => runScan(Number(limit.value) || 0).catch((err) => ((job.running = false), toast(err.message, true), renderPlan())) }, icon('play'), 'Calculate Fusion credits'),
       running ? null : h('div', { class: 'row', style: 'justify-content:center' }, h('span', { class: 'unit' }, 'Try with the first'), limit, h('span', { class: 'unit' }, 'repositories')),
     ),
   );
