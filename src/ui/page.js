@@ -556,7 +556,7 @@ function clientApp(boot) {
         field('Commit history window (days)', num(['windowDays'], { min: 7 })),
         field('Lines of code count', seg(['locBasis'], [['code', 'Code'], ['code+comments', '+ comments'], ['all', 'All lines']])),
       ),
-      h('div', { class: 'row', style: 'margin:16px 0 4px;gap:22px' }, toggle(['includeArchived'], 'Include archived repositories'), toggle(['includeForks'], 'Include forks'), toggle(['includeMerges'], 'Count merge commits')),
+      h('div', { class: 'row', style: 'margin:16px 0 4px;gap:22px' }, toggle(['includeArchived'], 'Include archived repositories'), toggle(['includeForks'], 'Include forks'), toggle(['includeMerges'], 'Count merge commits'), toggle(['countMinified'], 'Count minified files (*.min.js, *.min.css, *-bundle.js), sized by the dense-file rule')),
       h(
         'div',
         { class: 'field', style: 'margin-top:14px' },

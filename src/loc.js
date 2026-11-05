@@ -125,12 +125,12 @@ const encoder = new TextEncoder();
  * A function (path, size) → language or null: which files to count (known languages, not
  * excluded, not too big). The globs are compiled once, not per file.
  */
-export function makeSelector({ exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024 } = {}) {
+export function makeSelector({ exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countMinified = false } = {}) {
   const ex = exclude.map(globToRegExp);
   const inc = include.map(globToRegExp);
   return (path, size = 0) => {
     // Real paths are short; a huge one is hostile (and slow to match), so it is skipped.
-    if (path.length > MAX_PATH || size > maxFileBytes || isExcludedPath(path)) return null;
+    if (path.length > MAX_PATH || size > maxFileBytes || isExcludedPath(path, { countMinified })) return null;
     if (ex.length && ex.some((re) => re.test(path))) return null;
     if (inc.length && !inc.some((re) => re.test(path))) return null;
     return languageOf(path);

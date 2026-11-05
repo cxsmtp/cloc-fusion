@@ -121,15 +121,19 @@ export const DEFAULT_EXCLUDED_DIRS = new Set([
   'site-packages', 'Pods', 'Carthage', 'DerivedData', '.terraform', '.serverless', '_build',
 ]);
 
+// Files named as minified: excluded unless countMinified is set (then sized by the dense-file rule).
+const MINIFIED = [/\.min\.(js|css)$/i, /[.-]bundle\.js$/i];
+
 const GENERATED = [
-  /\.min\.(js|css)$/i, /[.-]bundle\.js$/i, /\.map$/i, /(^|\/)package-lock\.json$/, /(^|\/)yarn\.lock$/, /(^|\/)pnpm-lock\.yaml$/,
+  /\.map$/i, /(^|\/)package-lock\.json$/, /(^|\/)yarn\.lock$/, /(^|\/)pnpm-lock\.yaml$/,
   /(^|\/)composer\.lock$/, /(^|\/)Gemfile\.lock$/, /(^|\/)poetry\.lock$/, /(^|\/)Cargo\.lock$/, /(^|\/)go\.sum$/,
   /\.pb\.go$/, /_pb2\.py$/, /\.g\.cs$/, /\.designer\.cs$/i, /\.generated\.\w+$/i,
 ];
 
-export function isExcludedPath(path) {
+export function isExcludedPath(path, { countMinified = false } = {}) {
   const parts = path.split('/');
   for (let i = 0; i < parts.length - 1; i++) if (DEFAULT_EXCLUDED_DIRS.has(parts[i])) return true;
+  if (!countMinified && MINIFIED.some((re) => re.test(path))) return true;
   return GENERATED.some((re) => re.test(path));
 }
 

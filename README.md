@@ -195,7 +195,7 @@ Neither engine writes a working tree, and clones are deleted as soon as a reposi
 | and has more than | 512 bytes per line of code |
 | then it counts as | `ceil(file size in bytes / 40)` lines |
 
-So a 300 KB one-line bundle counts as 7,680 lines, not 1. A file too big to read (over `maxFileBytes`, 2 MB by default) is counted from its size the same way rather than dropped. Files named as minified (`*.min.js`, `*.min.css`, `*-bundle.js`), source maps and lock files stay excluded, like dependencies and build folders; the rule catches dense files with any other name. The report says how many files were counted by size, and the CSV has a *Dense files* column per repository.
+So a 300 KB one-line bundle counts as 7,680 lines, not 1. A file too big to read (over `maxFileBytes`, 2 MB by default) is counted from its size the same way rather than dropped. Files named as minified (`*.min.js`, `*.min.css`, `*-bundle.js`) are excluded by default. Tick *Count minified files* in the app or the page (`"countMinified": true` in the configuration) to count them, sized by this rule. Either way, minified code under any other name is caught by the rule, and source maps, lock files, dependencies and build folders stay excluded. The report says how many files were counted by size, and the CSV has a *Dense files* column per repository.
 
 **Commits** means non-merge commits on the default branch within the window (365 days by default), plus active authors and the last commit date. A repository younger than the window uses its own age.
 
@@ -229,7 +229,8 @@ Reports are written to `cloc-fusion-output/`:
 | `locBasis` | `code` | `code`, `code+comments` or `all` |
 | `countCategories` | code, markup, iac | Also available: `data`, `docs` |
 | `exclude` / `include` | [] | Path globs inside repositories, e.g. `**/test/**` |
-| `maxFileBytes` / `maxArchiveBytes` | 2 MB / 4 GB | Size limits |
+| `maxFileBytes` / `maxArchiveBytes` | 2 MB / 4 GB | Size limits (a file over `maxFileBytes` is counted from its size) |
+| `countMinified` | `false` | Count `*.min.js`, `*.min.css` and `*-bundle.js` files (sized as dense files) instead of excluding them |
 | `repoTimeoutMinutes` | 30 | Per-repository limit |
 | `connections[]` | | `name`, `provider`, `apiUrl`, `auth`, `orgs` (list or `all`), `includePersonal`, `include`/`exclude` (repository globs) |
 | `fusion` | | `periodMonths`, `models[] {id, name, creditsPer10k}`, `byFrequency`, `byCriticality`, `combine` |

@@ -146,6 +146,7 @@ async function runScan(cfg, { only, limit, resume, workDir, keep, outDir, log, p
           exclude: [...(cfg.exclude || []), ...(conn.excludePaths || [])],
           include: cfg.include || [],
           maxFileBytes: cfg.maxFileBytes,
+          countMinified: Boolean(cfg.countMinified),
           maxArchiveBytes: cfg.maxArchiveBytes,
           countCategories: cfg.countCategories,
           locBasis: cfg.locBasis,

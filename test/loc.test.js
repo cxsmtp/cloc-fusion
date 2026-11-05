@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { countText, selectFiles, LocTally, adjustedLoc } from '../src/loc.js';
+import { countText, selectFiles, makeSelector, LocTally, adjustedLoc } from '../src/loc.js';
 import { TarParser } from '../src/tar.js';
 import { tar } from '../bench/mock-github.js';
 import { languageOf, globToRegExp, isExcludedPath } from '../src/languages.js';
@@ -111,4 +111,20 @@ test('a file too big to read is counted from its size, not dropped', () => {
   p.push(new Uint8Array(tar([{ path: 'top/big.js', content: 'x'.repeat(4096) }, { path: 'top/small.js', content: 'y();\n' }])));
   assert.deepEqual(offered, ['top/big.js', 'top/small.js']);
   assert.deepEqual(read, ['top/small.js']);
+});
+
+test('minified files: excluded by default, counted (as dense files) with countMinified', () => {
+  for (const p of ['static/jquery.min.js', 'css/site.min.css', 'web/app-bundle.js', 'web/main.bundle.js']) {
+    assert.ok(isExcludedPath(p), p);
+    assert.ok(!isExcludedPath(p, { countMinified: true }), p);
+  }
+  // Dependencies, build output, source maps and lock files stay excluded either way.
+  for (const p of ['node_modules/x/x.min.js', 'dist/app.min.js', 'static/app.min.js.map', 'package-lock.json']) assert.ok(isExcludedPath(p, { countMinified: true }), p);
+  assert.equal(makeSelector()('static/jquery.min.js'), null);
+  assert.equal(makeSelector({ countMinified: true })('static/jquery.min.js').name, 'JavaScript');
+  // Counted, a one-line minified library is sized by the dense-file rule.
+  const t = new LocTally();
+  t.add(languageOf('jquery.min.js'), Buffer.from('!function(){' + 'a();'.repeat(25_000) + '}();\n'));
+  assert.equal(t.summary().code, Math.ceil(100_017 / 40));
+  assert.equal(t.summary().denseFiles, 1);
 });

@@ -445,7 +445,7 @@ const renderSettings = guarded(function renderSettings() {
   const chosen = new Set(cfg.countCategories || []);
   $('#settings').replaceChildren(
     h('div', { class: 'grid' }, field('Commit history window (days)', num(['windowDays'], { min: 1, max: 3650 })), field('Lines of code count', seg(['locBasis'], [['code', 'Code'], ['code+comments', '+ comments'], ['all', 'All lines']])), field('Repositories at once', num(['concurrency'], { min: 1, max: 12 }), 'Browsers open about 6 connections per site.')),
-    h('div', { class: 'row', style: 'margin-top:14px;gap:22px' }, toggle(['includeArchived'], 'Include archived repositories'), toggle(['includeForks'], 'Include forks'), toggle(['includeMerges'], 'Count merge commits')),
+    h('div', { class: 'row', style: 'margin-top:14px;gap:22px' }, toggle(['includeArchived'], 'Include archived repositories'), toggle(['includeForks'], 'Include forks'), toggle(['includeMerges'], 'Count merge commits'), toggle(['countMinified'], 'Count minified files (*.min.js, *.min.css, *-bundle.js), sized by the dense-file rule')),
     h('div', { class: 'field', style: 'margin-top:14px' }, h('span', null, 'File types that count'), h('div', { class: 'pills' }, cats.map(([id, label]) => h('button', { type: 'button', class: `pill-btn${chosen.has(id) ? ' on' : ''}`, onclick: () => (chosen.has(id) ? chosen.delete(id) : chosen.add(id), set(['countCategories'], [...chosen]), renderSettings()) }, label)))),
   );
 });
@@ -538,7 +538,7 @@ async function runScan(limit) {
   job.current = '';
   renderProgress();
   const results = new Map();
-  const opts = { windowDays: cfg.windowDays, includeMerges: cfg.includeMerges, exclude: cfg.exclude, include: cfg.include, maxFileBytes: cfg.maxFileBytes, maxArchiveBytes: Math.min(cfg.maxArchiveBytes || 1024 ** 3, 2 * 1024 ** 3), countCategories: cfg.countCategories, locBasis: cfg.locBasis, signal: abort.signal };
+  const opts = { windowDays: cfg.windowDays, includeMerges: cfg.includeMerges, exclude: cfg.exclude, include: cfg.include, maxFileBytes: cfg.maxFileBytes, countMinified: Boolean(cfg.countMinified), maxArchiveBytes: Math.min(cfg.maxArchiveBytes || 1024 ** 3, 2 * 1024 ** 3), countCategories: cfg.countCategories, locBasis: cfg.locBasis, signal: abort.signal };
   await pool(toMeasure, Math.max(1, Math.min(12, cfg.concurrency || 6)), async (repo) => {
     if (abort.signal.aborted) return;
     const session = sessions[repo.connection];
@@ -677,7 +677,7 @@ async function importSettings(file) {
     }
     if (obj(src.totals)) for (const k of ['extraPercent', 'bundleCredits']) if (Number.isFinite(Number(src.totals[k]))) cfg.totals[k] = Number(src.totals[k]);
     if (obj(src.overrides)) cfg.overrides = { ...(cfg.overrides || {}), ...Object.fromEntries(Object.entries(plain(src.overrides)).filter(([, v]) => obj(v))) };
-    const types = { windowDays: 'number', includeArchived: 'boolean', includeForks: 'boolean', includeMerges: 'boolean', locBasis: 'string', maxFileBytes: 'number' };
+    const types = { windowDays: 'number', includeArchived: 'boolean', includeForks: 'boolean', includeMerges: 'boolean', countMinified: 'boolean', locBasis: 'string', maxFileBytes: 'number' };
     for (const [k, t] of Object.entries(types)) if (typeof src[k] === t) cfg[k] = src[k];
     for (const k of ['countCategories', 'exclude', 'include', 'bots']) if (Array.isArray(src[k])) cfg[k] = src[k].map(String).slice(0, 200);
     if (Array.isArray(src.connections)) {
