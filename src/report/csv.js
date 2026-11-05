@@ -18,6 +18,7 @@ export const CSV_COLUMNS = [
   ['Main language', (r) => r.mainLanguage],
   ['Lines of code', (r) => r.lines ?? r.loc],
   ['Files counted', (r) => r.files],
+  ['Dense files (counted by size)', (r) => r.denseFiles],
   ['Code lines', (r) => r.code],
   ['Comment lines', (r) => r.comment],
   ['Blank lines', (r) => r.blank],

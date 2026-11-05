@@ -104,8 +104,22 @@ export function countText(text, lang) {
   return { code, comment, blank };
 }
 
+// Dense files: minified or generated code holds a whole program on a few very long lines, so its line
+// count says little. A file of at least 64 KB with more than 512 bytes per line of code is counted
+// as ceil(bytes / 40) lines instead, the way Checkmarx sizes such files. A file too big to read
+// (over maxFileBytes) is counted the same way, from its size.
+export const DENSE_MIN_BYTES = 64 * 1024;
+export const DENSE_BYTES_PER_LOC = 512;
+export const ADJUSTED_BYTES_PER_LOC = 40;
+
+/** The lines of code a file counts for: its own, or ceil(bytes / 40) when it is dense. */
+export function adjustedLoc(bytes, loc) {
+  return bytes >= DENSE_MIN_BYTES && bytes > DENSE_BYTES_PER_LOC * loc ? Math.ceil(bytes / ADJUSTED_BYTES_PER_LOC) : loc;
+}
+
 const looksBinary = (buf) => typeof buf !== 'string' && buf.subarray(0, 8000).includes(0);
 const utf8 = new TextDecoder();
+const encoder = new TextEncoder();
 
 /**
  * A function (path, size) → language or null: which files to count (known languages, not
@@ -141,14 +155,31 @@ export class LocTally {
     this.files = 0;
   }
 
+  #lang(lang) {
+    return (this.languages[lang.name] ||= { category: lang.category, files: 0, code: 0, comment: 0, blank: 0, denseFiles: 0 });
+  }
+
   add(lang, buf) {
     if (looksBinary(buf)) return;
-    const c = countText(typeof buf === 'string' ? buf : utf8.decode(buf), lang);
-    const t = (this.languages[lang.name] ||= { category: lang.category, files: 0, code: 0, comment: 0, blank: 0 });
+    const text = typeof buf === 'string' ? buf : utf8.decode(buf);
+    const c = countText(text, lang);
+    const bytes = typeof buf === 'string' ? encoder.encode(buf).length : buf.length;
+    const code = adjustedLoc(bytes, c.code);
+    const t = this.#lang(lang);
     t.files++;
-    t.code += c.code;
+    t.code += code;
     t.comment += c.comment;
     t.blank += c.blank;
+    if (code !== c.code) t.denseFiles++;
+    this.files++;
+  }
+
+  /** A file too big to read: counted from its size, as a dense file is. */
+  addBySize(lang, bytes) {
+    const t = this.#lang(lang);
+    t.files++;
+    t.code += Math.ceil(bytes / ADJUSTED_BYTES_PER_LOC);
+    t.denseFiles++;
     this.files++;
   }
 
@@ -161,6 +192,7 @@ export class LocTally {
     let code = 0;
     let comment = 0;
     let blank = 0;
+    let denseFiles = 0;
     for (const t of Object.values(this.languages)) {
       const bc = (byCategory[t.category] ||= { files: 0, code: 0, comment: 0, blank: 0 });
       bc.files += t.files;
@@ -172,11 +204,12 @@ export class LocTally {
       code += t.code;
       comment += t.comment;
       blank += t.blank;
+      denseFiles += t.denseFiles || 0;
       loc += locBasis === 'all' ? t.code + t.comment + t.blank : locBasis === 'code+comments' ? t.code + t.comment : t.code;
     }
     const top = Object.entries(this.languages)
       .filter(([, t]) => cats.has(t.category))
       .sort((a, b) => b[1].code - a[1].code);
-    return { loc, files, code, comment, blank, byCategory, languages: this.languages, mainLanguage: top[0]?.[0] ?? null };
+    return { loc, files, code, comment, blank, denseFiles, byCategory, languages: this.languages, mainLanguage: top[0]?.[0] ?? null };
   }
 }

@@ -4,6 +4,11 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+### Changed
+- **Dense files are counted by size, the way Checkmarx sizes them.** A file of at least 64 KB with more than 512 bytes per line of code (minified or generated code, often a whole program on one line) counts as `ceil(bytes / 40)` lines instead of its line count: a 300 KB one-line bundle is 7,680 lines, not 1. Files named as minified (`*.min.js`, `*.min.css`, `*-bundle.js`), source maps and lock files stay excluded; the rule catches dense files with any other name. The same in the git engine, the API engine and the standalone page.
+- **No file is dropped for its size.** A file over `maxFileBytes` (2 MB by default) is counted from its size, as a dense file, instead of being skipped.
+- Reports show how many files were counted by size: the HTML report's footer, a *Dense files (counted by size)* CSV column per repository, and `counts.denseFiles` in the JSON.
+
 ## [1.3.2] - 2026-10-26
 
 No repository left out.

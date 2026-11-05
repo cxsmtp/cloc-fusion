@@ -101,7 +101,7 @@ export async function readZipBytes(buf, { onEntry, onFile, maxFileBytes, maxArch
     if (name.endsWith('/')) continue;
     entries++;
     const e = { path: name, size: usize };
-    if (usize > maxFileBytes || !onEntry(e)) continue;
+    if (!onEntry(e) || usize > maxFileBytes) continue;
     if (method !== 0 && method !== 8) continue;
     if (csize > maxFileBytes * 2 + 1024 || offsets.has(local)) continue;
     offsets.add(local);
@@ -184,7 +184,12 @@ export async function measureRepo(repo, { session, conn, windowDays = 365, inclu
   const onEntry = (e) => {
     treeFiles++;
     e.path = format === 'zip' ? e.path : stripTop(e.path);
-    e.lang = select(e.path, e.size);
+    e.lang = select(e.path);
+    // Too big to read whole: counted from its size, like a dense (minified) file.
+    if (e.lang && e.size > maxFileBytes) {
+      tally.addBySize(e.lang, e.size);
+      return false;
+    }
     return Boolean(e.lang);
   };
   const onFile = (e, content) => tally.add(e.lang, content);

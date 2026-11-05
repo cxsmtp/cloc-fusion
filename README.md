@@ -187,6 +187,16 @@ Neither engine writes a working tree, and clones are deleted as soon as a reposi
 
 **Lines of code** means code lines only, with no blanks or comments, counted the way cloc counts them. About 75 languages are recognised, in 5 categories: code, markup, iac, data and docs. By default code, markup and IaC count. Dependencies (`node_modules`, `vendor`…), build output, minified and generated files, and lock files are excluded. Change this with `locBasis`, `countCategories` and `exclude`/`include` path globs. On Express, the counts come within 0.4% of cloc.
 
+**Dense files** (minified or generated code that puts a whole program on a few very long lines) are counted by size, the way Checkmarx sizes them:
+
+| Rule | Value |
+|---|---|
+| The file is at least | 64 KB (65,536 bytes) |
+| and has more than | 512 bytes per line of code |
+| then it counts as | `ceil(file size in bytes / 40)` lines |
+
+So a 300 KB one-line bundle counts as 7,680 lines, not 1. A file too big to read (over `maxFileBytes`, 2 MB by default) is counted from its size the same way rather than dropped. Files named as minified (`*.min.js`, `*.min.css`, `*-bundle.js`), source maps and lock files stay excluded, like dependencies and build folders; the rule catches dense files with any other name. The report says how many files were counted by size, and the CSV has a *Dense files* column per repository.
+
 **Commits** means non-merge commits on the default branch within the window (365 days by default), plus active authors and the last commit date. A repository younger than the window uses its own age.
 
 **Contributors (90 days)** come from the commit history: everyone who committed to the default branch in the last 90 days, with their name, email, commits and the repositories they contributed to. Each person is listed once by email (case-insensitive) and counted once across the estate and per organization. Bots (dependabot, renovate, github-actions, any `[bot]` account, and any you name with `"bots": ["svc-*", "*jenkins*"]` in the configuration) are listed as bots and not counted as developers. The list is in the report's *Contributors* section and in `cloc-fusion-contributors.csv`. Someone who commits under two email addresses is listed twice.

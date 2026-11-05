@@ -261,7 +261,9 @@ export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = nu
       await git(['-c', 'fetch.negotiationAlgorithm=noop', 'fetch', 'origin', '--quiet', '--no-tags', '--no-write-fetch-head', '--recurse-submodules=no', '--filter=blob:none', '--stdin'], { cwd: dir, env, input: oids.join('\n') + '\n', timeoutMs }).catch(() => {});
       onPhase('count');
       await catFileBatch(dir, env, files, (f, content) => {
+        // Too big to read whole: counted from its size, like a dense (minified) file.
         if (content.length <= maxFileBytes) tally.add(f.lang, content);
+        else tally.addBySize(f.lang, content.length);
       }, timeoutMs);
     }
     const sum = tally.summary({ countCategories, locBasis });

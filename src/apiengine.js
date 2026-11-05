@@ -41,7 +41,12 @@ export async function analyzeRepoApi(repo, { session, conn, workDir, windowDays 
   const onEntry = (e) => {
     treeFiles++;
     e.path = e.format === 'zip' ? e.path : stripTop(e.path);
-    e.lang = select(e.path, e.size);
+    e.lang = select(e.path);
+    // Too big to read whole: counted from its size, like a dense (minified) file.
+    if (e.lang && e.size > maxFileBytes) {
+      tally.addBySize(e.lang, e.size);
+      return false;
+    }
     return Boolean(e.lang);
   };
   const onFile = (e, content) => tally.add(e.lang, content);

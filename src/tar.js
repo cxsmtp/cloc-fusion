@@ -102,7 +102,7 @@ export class TarParser {
         } else if (type === '0' || type === '\0' || type === '7') {
           this.entries++;
           const e = { path: name, size };
-          const want = size <= this.maxFileBytes && this.onEntry(e);
+          const want = this.onEntry(e) && size <= this.maxFileBytes;
           this.entry = want ? e : null;
           this.chunks = want ? [] : null;
         } else {

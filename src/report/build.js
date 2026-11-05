@@ -110,6 +110,7 @@ export function buildReport(cfg, repos, problems = [], { started = Date.now(), p
       measured: measured.length,
       failed: rows.filter((r) => r.error).length,
       empty: rows.filter((r) => r.empty).length,
+      denseFiles: measured.reduce((n, r) => n + (r.denseFiles || 0), 0),
     },
     totals: estimate.totals,
     credits: summary,
