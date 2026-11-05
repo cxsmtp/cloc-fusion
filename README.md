@@ -7,7 +7,7 @@ cloc-fusion connects to GitHub, GitLab, Azure DevOps and Bitbucket, across as ma
 - **Or just one HTML file.** Open `cloc-fusion.html` in your browser: no install, no hosting, no server. It signs in, scans and prices right in the page.
 - **A web app, not a command line.** Run it and your browser opens: sign in through the browser, check the pricing, press *Calculate Fusion credits*, and watch the credits add up.
 - **On-premises.** It runs on your machine, next to your own GitHub Enterprise Server, GitLab, Azure DevOps Server or Bitbucket Data Center as well as the cloud platforms. Code, figures and tokens stay with you; there is no cloud service in between.
-- **You choose the models.** Pick which Fusion model each repository gets by change frequency, criticality or one by one, in the app or right in the HTML report, and every total follows.
+- **You choose the models.** Pick which Fusion model each repository gets by change frequency or one by one, in the app or right in the HTML report, and every total follows.
 - **Nothing to install.** One file for Windows, macOS or Linux, with no runtime, git or packages needed.
 - **Every platform, every organization**, picked in a guided setup that also handles SSO sign-in.
 - **Built for scale:** benchmarked at 10,000 repositories, with 47,000+ API calls and injected failures, and 0 lost ([benchmarks](docs/BENCHMARKS.md)).
@@ -112,12 +112,12 @@ You can change any of this:
 - the projection period (`--period-months`);
 - the scans for each bucket (`fusion.byFrequency`);
 - several Fusion models, each with its own rate;
-- a criticality from 1 to 5 per repository, which raises its scans through `fusion.byCriticality` (by default the higher of frequency and criticality wins);
+- in the configuration file only, a criticality from 1 to 5 per repository (`overrides`), which raises its scans through `fusion.byCriticality` (by default the higher of frequency and criticality wins). The app, the page and the report don't show it;
 - per-repository overrides that pin `scans`, a `model` or `loc`, or `exclude` the repository.
 
-**Which model a repository gets**, as in the Cx Credits Calculator: the model picked for that repository, else the model of its change frequency (its criticality's first when criticality decides), else the default model. So you can put the busiest repositories on one model, the most critical on another, and everything else on the default.
+**Which model a repository gets**, as in the Cx Credits Calculator: the model picked for that repository, else the model of its change frequency, else the default model. So you can put the busiest repositories on one model, a few chosen ones on another, and everything else on the default.
 
-**Tune the plan in the report.** The HTML report has the same controls in its *Choose your Fusion models* section: models and their credits, scans and model per change frequency and per criticality, the projection period, the extra % and the bundle size, plus a criticality, scans and model picker on every row of the repository table. Every figure on the page follows instantly, even with 10,000 repositories. Choices are remembered in that browser; *Download settings* saves them as `cloc-fusion-settings.json`, which the web app imports (*Import settings*) and `cloc-fusion price --config cloc-fusion-settings.json` reads.
+**Tune the plan in the report.** The HTML report has the same controls in its *Choose your Fusion models* section: models and their credits, scans and model per change frequency, the projection period, the extra % and the bundle size, plus a scans and model picker on every row of the repository table. Every figure on the page follows instantly, even with 10,000 repositories. Choices are remembered in that browser; *Download settings* saves them as `cloc-fusion-settings.json`, which the web app imports (*Import settings*) and `cloc-fusion price --config cloc-fusion-settings.json` reads.
 
 ### Connecting and signing in
 

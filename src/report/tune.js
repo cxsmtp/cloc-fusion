@@ -78,7 +78,7 @@ export const tuneSection = (icons) => `<section class="glass tune reveal" id="tu
 <p class="lede" style="margin:0">Pick the model each repository gets: by how often it changes, by how critical it is, or one by one in the table below, with a default for the rest. Every figure on this page follows as you change it.</p></div>
 <div class="tune-actions"><button type="button" id="tune-reset" title="Back to the settings this report was priced with">Reset</button><button type="button" class="primary" id="tune-save" title="Use these choices in the cloc-fusion app (Import settings) or the CLI (--config)">${icons.download}<span>Download settings</span></button></div></div>
 <div class="tune-kpis" id="tune-kpis"></div>
-<div class="tune-grid"><div class="tune-col"><div id="tune-models"></div><div id="tune-general"></div></div><div class="tune-col"><div id="tune-freq"></div><div id="tune-crit"></div></div></div>
+<div class="tune-grid"><div class="tune-col"><div id="tune-models"></div><div id="tune-general"></div></div><div class="tune-col"><div id="tune-freq"></div></div></div>
 </section>`;
 
 /**
@@ -237,19 +237,11 @@ export function tuner(ctx) {
           '<td class="n"><input type="number" min="0" data-freq="' + f.id + '" data-f="s" value="' + esc(num(r.s) === null ? sug : r.s) + '" aria-label="Fusion scans for ' + esc(f.label) + '"></td>' +
           '<td>' + modelSelect('data-freq="' + f.id + '" data-f="m" aria-label="Model for ' + esc(f.label) + '"', r.m, defLabel()) + '</td></tr>';
       }).join('') + '</tbody></table></div>');
-    setHtml('tune-crit', '<h3>By criticality <small>set per repository in the table below</small></h3><div class="tune-scroll"><table><thead><tr><th>Criticality</th><th class="n">Repos</th><th class="n">Scans</th><th>Model</th></tr></thead><tbody>' +
-      CRITS.map(function (c) {
-        var r = S.crit[c];
-        return '<tr><td>' + c + (c === 5 ? ' (most critical)' : c === 1 ? ' (least critical)' : '') + '</td><td class="n muted">' + fmt(count(function (x) { return Number(critOf(x)) === c; })) + '</td>' +
-          '<td class="n"><input type="number" min="0" data-crit="' + c + '" data-f="s" value="' + esc(num(r.s) === null ? '' : r.s) + '" placeholder="—" aria-label="Fusion scans for criticality ' + c + '"></td>' +
-          '<td>' + modelSelect('data-crit="' + c + '" data-f="m" aria-label="Model for criticality ' + c + '"', r.m, defLabel()) + '</td></tr>';
-      }).join('') + '</tbody></table></div>');
     setHtml('tune-general', '<h3>Plan</h3><div class="fields" style="margin-top:0">' +
       '<label>Projection (months)<input type="number" min="1" max="60" data-f="period" value="' + esc(S.period) + '"></label>' +
-      '<label>If cadences disagree<select data-f="combine">' + opt('higher', 'Higher wins', S.combine === 'higher') + opt('frequency', 'Frequency decides', S.combine === 'frequency') + opt('criticality', 'Criticality decides', S.combine === 'criticality') + '</select></label>' +
       '<label>Extra on top (%)<input type="number" min="0" max="500" step="0.5" data-f="extra" value="' + esc(S.extra) + '"></label>' +
       '<label>Credits per bundle<input type="number" min="1" data-f="bundle" value="' + esc(S.bundle) + '"></label></div>' +
-      '<p class="how">Which model a repository gets: the one picked for it in the table below, else its change frequency’s (its criticality’s first when criticality decides), else the default model. Credits = 10K units × Fusion scans × the model’s credits per 10K LOC.</p>');
+      '<p class="how">Which model a repository gets: the one picked for it in the table below, else its change frequency’s, else the default model. Credits = 10K units × Fusion scans × the model’s credits per 10K LOC.</p>');
   }
 
   function changed(repaint) {

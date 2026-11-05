@@ -610,7 +610,6 @@ function clientApp(boot) {
         'div',
         { class: 'grid' },
         field('Projection period (months)', num(['fusion', 'periodMonths'], { min: 1, max: 60, after: () => (renderPricing(), schedulePrice()) })),
-        field('If cadences disagree', seg(['fusion', 'combine'], [['higher', 'Higher wins'], ['frequency', 'Frequency'], ['criticality', 'Criticality']], schedulePrice)),
         field('Extra credits on top (%)', num(['totals', 'extraPercent'], { max: 500, after: schedulePrice })),
         field('Credits per bundle', num(['totals', 'bundleCredits'], { min: 1, after: schedulePrice })),
       ),
@@ -664,30 +663,6 @@ function clientApp(boot) {
             ),
           ),
         ),
-        h(
-          'div',
-          null,
-          h('h3', { style: 'margin:0 0 8px;font-size:14px' }, 'By criticality (optional)'),
-          h(
-            'table',
-            null,
-            h('thead', null, h('tr', null, h('th', null, 'Criticality'), h('th', { class: 'n' }, 'Scans'), h('th', null, 'Model'))),
-            h(
-              'tbody',
-              null,
-              S.criticalities.map((c) =>
-                h(
-                  'tr',
-                  null,
-                  h('td', null, `${c} ${c === 5 ? '(highest)' : c === 1 ? '(lowest)' : ''}`),
-                  h('td', { class: 'n' }, h('input', { type: 'number', min: 0, placeholder: '—', title: 'Empty: not used', value: f.byCriticality?.[c]?.scans ?? '', style: 'max-width:100px;margin-left:auto', oninput: (e) => (set(['fusion', 'byCriticality', c], { ...(f.byCriticality?.[c] || {}), scans: e.target.value === '' ? null : Number(e.target.value) }), schedulePrice()) })),
-                  h('td', null, h('select', { onchange: (e) => (set(['fusion', 'byCriticality', c], { ...(f.byCriticality?.[c] || {}), model: e.target.value || null }), schedulePrice()) }, modelOptions(f.byCriticality?.[c]?.model))),
-                ),
-              ),
-            ),
-          ),
-          h('small', { class: 'muted' }, 'Criticality comes from repository rules below. Which model a repository gets: the one its rule pins, else its change frequency’s (its criticality’s first when criticality wins), else the default model.'),
-        ),
       ),
     );
   }
@@ -705,7 +680,7 @@ function clientApp(boot) {
         ? h(
             'table',
             null,
-            h('thead', null, h('tr', null, h('th', null, 'Repository or pattern'), h('th', null, 'Criticality'), h('th', { class: 'n' }, 'Scans'), h('th', null, 'Model'), h('th', null, 'Skip'), h('th', null, ''))),
+            h('thead', null, h('tr', null, h('th', null, 'Repository or pattern'), h('th', { class: 'n' }, 'Scans'), h('th', null, 'Model'), h('th', null, 'Skip'), h('th', null, ''))),
             h(
               'tbody',
               null,
@@ -714,7 +689,6 @@ function clientApp(boot) {
                   'tr',
                   null,
                   h('td', null, h('input', { type: 'text', value: pattern, onchange: (e) => e.target.value.trim() && rename(pattern, e.target.value.trim()) })),
-                  h('td', null, h('select', { onchange: (e) => ((o.criticality = e.target.value ? Number(e.target.value) : undefined), markDirty(), schedulePrice()) }, h('option', { value: '' }, '—'), [5, 4, 3, 2, 1].map((c) => h('option', { value: c, selected: o.criticality === c }, String(c))))),
                   h('td', { class: 'n' }, h('input', { type: 'number', min: 0, value: o.scans ?? '', placeholder: 'auto', style: 'max-width:90px;margin-left:auto', oninput: (e) => ((o.scans = e.target.value === '' ? undefined : Number(e.target.value)), markDirty(), schedulePrice()) })),
                   h('td', null, h('select', { onchange: (e) => ((o.model = e.target.value || undefined), markDirty(), schedulePrice()) }, h('option', { value: '' }, '(default)'), (cfg.fusion.models || []).map((m) => h('option', { value: m.id, selected: o.model === m.id }, m.name || m.id)))),
                   h('td', null, h('input', { type: 'checkbox', checked: Boolean(o.exclude), onchange: (e) => ((o.exclude = e.target.checked || undefined), markDirty(), schedulePrice()) })),
@@ -724,7 +698,7 @@ function clientApp(boot) {
             ),
           )
         : h('p', { class: 'muted', style: 'margin:0 0 10px' }, 'No rules: every repository follows its change frequency.'),
-      h('button', { type: 'button', class: 'sm', style: 'margin-top:10px', onclick: () => ((cfg.overrides[`org/repo-${entries.length + 1}`] = { criticality: 5 }), markDirty(), renderOverrides()) }, icon('plus'), 'Add a rule'),
+      h('button', { type: 'button', class: 'sm', style: 'margin-top:10px', onclick: () => ((cfg.overrides[`org/repo-${entries.length + 1}`] = {}), markDirty(), renderOverrides()) }, icon('plus'), 'Add a rule'),
     );
   }
 
