@@ -1,7 +1,13 @@
 name: CI
+# Once per change: pull requests, and pushes to main. A push to a pull request's branch
+# would otherwise run everything twice and queue for scarce macOS runners.
 on:
   push:
+    branches: [main]
   pull_request:
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

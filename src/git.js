@@ -193,7 +193,7 @@ export function commitStats(text, { now = Date.now(), weeks = 52 } = {}) {
  * Clone and measure one repository. Returns
  * { headSha, branch, commits, authors, windowDays, weekly, lastCommitAt, loc, files, code, comment, blank, languages, mainLanguage }.
  */
-export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = null, allowHttp = false, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countCategories, locBasis, timeoutMs = 30 * 60000, keep = false, now = Date.now(), onPhase = () => {} }) {
+export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = null, allowHttp = false, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countMinified = false, countCategories, locBasis, timeoutMs = 30 * 60000, keep = false, now = Date.now(), onPhase = () => {} }) {
   const id = createHash('sha256').update(`${repo.connection}/${repo.cloneUrl}`).digest('hex').slice(0, 10);
   const dir = join(workDir, `${repo.name.replace(/[^\w.-]+/g, '_').slice(0, 40)}-${id}`);
   let url;
@@ -253,7 +253,7 @@ export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = nu
 
     onPhase('files');
     const tree = parseLsTree((await git(['ls-tree', '-r', '-z', 'HEAD'], { cwd: dir, env })).stdout);
-    const files = selectFiles(tree, { exclude, include });
+    const files = selectFiles(tree, { exclude, include, countMinified });
     const tally = new LocTally();
     if (files.length) {
       // One fetch for every needed file, rather than one round trip per file on first read.
@@ -261,7 +261,9 @@ export async function analyzeRepo(repo, { workDir, authHeader, allowedHosts = nu
       await git(['-c', 'fetch.negotiationAlgorithm=noop', 'fetch', 'origin', '--quiet', '--no-tags', '--no-write-fetch-head', '--recurse-submodules=no', '--filter=blob:none', '--stdin'], { cwd: dir, env, input: oids.join('\n') + '\n', timeoutMs }).catch(() => {});
       onPhase('count');
       await catFileBatch(dir, env, files, (f, content) => {
+        // Too big to read whole: counted from its size, like a dense (minified) file.
         if (content.length <= maxFileBytes) tally.add(f.lang, content);
+        else tally.addBySize(f.lang, content.length);
       }, timeoutMs);
     }
     const sum = tally.summary({ countCategories, locBasis });

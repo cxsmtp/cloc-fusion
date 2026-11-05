@@ -18,7 +18,7 @@ export { statsFromCommits } from './commits.js';
 const DAY = 86400000;
 
 /** Measure one repository through the API. Same result shape as git.js analyzeRepo. */
-export async function analyzeRepoApi(repo, { session, conn, workDir, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, maxArchiveBytes, countCategories, locBasis, now = Date.now(), onPhase = () => {} }) {
+export async function analyzeRepoApi(repo, { session, conn, workDir, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countMinified = false, maxArchiveBytes, countCategories, locBasis, now = Date.now(), onPhase = () => {} }) {
   const { provider, api } = session;
   if (!provider.archive || !api) throw new Error(`the git-free engine does not support ${provider.label}; install git (or use --engine git)`);
   if (!repo.defaultBranch) return { empty: true, commits: 0, authors: 0, devs90: 0, bots90: 0, contributors90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null };
@@ -37,11 +37,16 @@ export async function analyzeRepoApi(repo, { session, conn, workDir, windowDays 
   onPhase('files');
   const tally = new LocTally();
   let treeFiles = 0;
-  const select = makeSelector({ exclude, include, maxFileBytes });
+  const select = makeSelector({ exclude, include, maxFileBytes, countMinified });
   const onEntry = (e) => {
     treeFiles++;
     e.path = e.format === 'zip' ? e.path : stripTop(e.path);
-    e.lang = select(e.path, e.size);
+    e.lang = select(e.path);
+    // Too big to read whole: counted from its size, like a dense (minified) file.
+    if (e.lang && e.size > maxFileBytes) {
+      tally.addBySize(e.lang, e.size);
+      return false;
+    }
     return Boolean(e.lang);
   };
   const onFile = (e, content) => tally.add(e.lang, content);

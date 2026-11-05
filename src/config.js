@@ -25,6 +25,7 @@ export const DEFAULTS = Object.freeze({
   includeForks: false,
   includeMerges: false,
   maxFileBytes: 2 * 1024 * 1024,
+  countMinified: false, // *.min.js, *.min.css, *-bundle.js: excluded, or counted (sized as dense files)
   locBasis: 'code', // code | code+comments | all
   countCategories: ['code', 'markup', 'iac'],
   exclude: [],

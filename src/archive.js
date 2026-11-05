@@ -103,7 +103,7 @@ export async function readZipFile(path, { onEntry, onFile, maxFileBytes = 2 * 10
       if (name.endsWith('/')) continue;
       entries++;
       const e = { path: name, size: usize };
-      if (usize > maxFileBytes || !onEntry(e)) continue;
+      if (!onEntry(e) || usize > maxFileBytes) continue;
       if (method !== 0 && method !== 8) continue;
       if (csize > maxFileBytes * 2 + 1024) continue;
       if (offsets.has(local)) continue;

@@ -101,7 +101,7 @@ export async function readZipBytes(buf, { onEntry, onFile, maxFileBytes, maxArch
     if (name.endsWith('/')) continue;
     entries++;
     const e = { path: name, size: usize };
-    if (usize > maxFileBytes || !onEntry(e)) continue;
+    if (!onEntry(e) || usize > maxFileBytes) continue;
     if (method !== 0 && method !== 8) continue;
     if (csize > maxFileBytes * 2 + 1024 || offsets.has(local)) continue;
     offsets.add(local);
@@ -160,7 +160,7 @@ export async function estimateFromLanguages(api, repo, { countCategories = ['cod
  * Measure one repository from the page. `session` is { provider, api }; options as the API engine's.
  * Returns the same shape as the CLI engines, plus `locEstimated` when lines are an estimate.
  */
-export async function measureRepo(repo, { session, conn, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, maxArchiveBytes = 1024 ** 3, countCategories, locBasis, now = Date.now(), signal, onPhase = () => {} }) {
+export async function measureRepo(repo, { session, conn, windowDays = 365, includeMerges = false, exclude = [], include = [], maxFileBytes = 2 * 1024 * 1024, countMinified = false, maxArchiveBytes = 1024 ** 3, countCategories, locBasis, now = Date.now(), signal, onPhase = () => {} }) {
   const { provider, api } = session;
   if (!provider.archive || !api) throw new Error(`${provider.label} is not supported in the standalone page`);
   if (!repo.defaultBranch) return { empty: true, commits: 0, authors: 0, devs90: 0, bots90: 0, contributors90: [], windowDays, weekly: [], loc: 0, files: 0, code: 0, comment: 0, blank: 0, languages: {}, mainLanguage: null, engine: 'browser' };
@@ -179,12 +179,17 @@ export async function measureRepo(repo, { session, conn, windowDays = 365, inclu
   onPhase('files');
   const tally = new LocTally();
   let treeFiles = 0;
-  const select = makeSelector({ exclude, include, maxFileBytes });
+  const select = makeSelector({ exclude, include, maxFileBytes, countMinified });
   const { url, format } = provider.archive(repo, conn);
   const onEntry = (e) => {
     treeFiles++;
     e.path = format === 'zip' ? e.path : stripTop(e.path);
-    e.lang = select(e.path, e.size);
+    e.lang = select(e.path);
+    // Too big to read whole: counted from its size, like a dense (minified) file.
+    if (e.lang && e.size > maxFileBytes) {
+      tally.addBySize(e.lang, e.size);
+      return false;
+    }
     return Boolean(e.lang);
   };
   const onFile = (e, content) => tally.add(e.lang, content);

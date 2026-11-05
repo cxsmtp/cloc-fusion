@@ -1,5 +1,5 @@
 name: Standalone executables
-# Every push builds the executables for all platforms. A release is published when:
+# Every pull request and every push to main builds the executables for all platforms. A release is published when:
 #   - a v* tag is pushed, or
 #   - the default branch carries a version (src/version.js) that has no v<version> tag yet
 #     (CI then creates the tag), or
@@ -8,9 +8,14 @@ name: Standalone executables
 # (scripts/release-check.mjs), and that version's CHANGELOG entry becomes the release notes.
 on:
   push:
-    branches: ['**']
+    branches: [main]
     tags: ['v*']
+  pull_request:
   workflow_dispatch:
+concurrency:
+  # A newer push to the same pull request supersedes the build; releases are never cancelled.
+  group: release-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
 jobs:

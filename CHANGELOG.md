@@ -4,6 +4,23 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-05
+
+Minified and generated code sized the way Checkmarx sizes it, and your choice whether to count minified files.
+
+### Added
+- **Count minified files, or exclude them.** A *Count minified files (\*.min.js, \*.min.css, \*-bundle.js)* checkbox in the web app and the standalone page, `"countMinified": true` in the configuration. Off by default (excluded, as before); on, they are counted and sized by the dense-file rule below. Dependencies, build output, source maps and lock files stay excluded either way.
+
+### Changed
+- The main button reads **Calculate Fusion credits** (was *Run the Fusion scan*) in the web app and the standalone page: it sizes the estate and works out the credits, it doesn't start a Fusion scan.
+- **Dense files are counted by size, the way Checkmarx sizes them.** A file of at least 64 KB with more than 512 bytes per line of code (minified or generated code, often a whole program on one line) counts as `ceil(bytes / 40)` lines instead of its line count: a 300 KB one-line bundle is 7,680 lines, not 1. The rule catches minified code under any name; files named as minified follow the new *Count minified files* setting. The same in the git engine, the API engine and the standalone page.
+- **No file is dropped for its size.** A file over `maxFileBytes` (2 MB by default) is counted from its size, as a dense file, instead of being skipped.
+- Reports show how many files were counted by size: the HTML report's footer, a *Dense files (counted by size)* CSV column per repository, and `counts.denseFiles` in the JSON.
+
+### Verification
+- **Tests:** 70 passing, including the rule's boundaries (64 KB minus one byte, exactly 512 bytes per line, no code line), an oversized file counted by size, and minified files excluded by default and counted with `countMinified`.
+- **Line counting speed** unchanged: 133 MB/s per core.
+
 ## [1.3.2] - 2026-10-26
 
 No repository left out.
@@ -217,7 +234,8 @@ First release.
 - **Checkmarx One:** a scan was started but did not complete; see 1.3.0.
 - **Performance:** not benchmarked at scale; see 1.1.0.
 
-[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.2...HEAD
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.0...HEAD
+[1.4.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.1...v1.3.2
 [1.3.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.2.1...v1.3.0

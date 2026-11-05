@@ -12,6 +12,7 @@ export const UI_DEFAULTS = {
   "includeForks": false,
   "includeMerges": false,
   "maxFileBytes": 2097152,
+  "countMinified": false,
   "locBasis": "code",
   "countCategories": [
     "code",
