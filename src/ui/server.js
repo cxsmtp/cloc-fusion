@@ -118,7 +118,7 @@ export async function startUi({ configFile, outDir, port = 4747, open = true, lo
     tools,
     config: maskConfig(config),
     providers: providersMeta,
-    frequencies: FREQUENCIES.map((f) => ({ id: f.id, label: f.label, suggested: suggestedScans(f.id, config.fusion.periodMonths) })),
+    frequencies: FREQUENCIES.map((f) => ({ id: f.id, short: f.short, label: f.label, suggested: suggestedScans(f.id, config.fusion.periodMonths) })),
     criticalities: CRITICALITIES,
     signIn: Object.fromEntries(config.connections.map((c) => [c.name, signInOptions(c)])),
     report: summarize(lastReport),

@@ -119,6 +119,13 @@ th,td{padding:8px 10px;border-bottom:1px solid var(--ng-glass-line);text-align:l
 th{font:600 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ng-head)}
 td input,td select{min-height:34px}
 td.n,th.n{text-align:right}
+.fq-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:2px 10px;margin:0 0 6px}.fq-head small{font-size:12px}.fq-head h3{margin:0;font-size:14px}.fq-head .sm{margin-left:auto}.fq-reset[hidden]{display:none}
+.fq-scroll{overflow-x:auto}.fq-table{width:100%;border-collapse:collapse;table-layout:fixed;min-width:720px}
+.fq-table th,.fq-table td{padding:3px 3px;border:0;text-align:center;font-size:12px;white-space:nowrap}
+.fq-table thead th{font:600 11px var(--font);color:var(--muted);text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis}
+.fq-table tbody th{text-align:left;width:76px;font:600 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--ng-head)}
+.fq-table input{width:100%;min-height:30px;padding:0 4px;text-align:center;border-radius:8px}.fq-table input.own{border-color:var(--ng-from);background:color-mix(in srgb,var(--ng-from) 10%,transparent);font-weight:700}
+.rules-grid .fq-table select,.fq-table select{min-width:0;width:100%;min-height:28px;padding:0 2px;font-size:11.5px;border-radius:8px}
 .suggested{font:500 10.5px var(--mono);color:var(--muted);margin-left:6px}
 details.more>summary{cursor:pointer;color:var(--accent);font-weight:600;font-size:13px;list-style:none}
 details.more>summary::-webkit-details-marker{display:none}
@@ -596,6 +603,59 @@ function clientApp(boot) {
   }
 
   // ---------- pricing ----------
+  function freqGrid({ f, frequencies, suggestedOf, reposOf, modelOptions, changed, reset }) {
+    // One compact strip: the change frequencies across, Fusion scans below (suggested unless changed,
+    // changed ones highlighted) and, only with more than one model, the model for each.
+    const multi = (f.models || []).length > 1;
+    const own = (id) => f.byFrequency?.[id]?.scans !== undefined && f.byFrequency?.[id]?.scans !== null;
+    const put = (id, k, v) => set(['fusion', 'byFrequency', id], { ...(f.byFrequency?.[id] || {}), [k]: v });
+    // The first option names the default model in full; in a narrow column, just "Default".
+    const short = (opts) => (opts[0] && ((opts[0].title = opts[0].textContent), (opts[0].textContent = 'Default')), opts);
+    const row = (label, cell) => h('tr', null, h('th', { scope: 'row' }, label), frequencies.map((fr) => h('td', null, cell(fr))));
+    return h(
+      'div',
+      { class: 'fq' },
+      h(
+        'div',
+        { class: 'fq-head' },
+        h('h3', null, 'Fusion scans by how often a repository changes'),
+        h('small', { class: 'muted' }, `per ${f.periodMonths || 12} months`),
+        h('button', { type: 'button', class: 'sm fq-reset', hidden: !frequencies.some((fr) => own(fr.id)), onclick: reset }, 'Reset to suggested'),
+      ),
+      h(
+        'div',
+        { class: 'fq-scroll' },
+        h(
+          'table',
+          { class: 'fq-table' },
+          h('thead', null, h('tr', null, h('th', null, ''), frequencies.map((fr) => h('th', { title: fr.label }, fr.short || fr.label)))),
+          h(
+            'tbody',
+            null,
+            reposOf ? row('Repositories', (fr) => h('span', { class: 'muted' }, String(reposOf(fr)))) : null,
+            row('Scans', (fr) =>
+              h('input', {
+                type: 'number',
+                min: 0,
+                class: own(fr.id) ? 'own' : '',
+                value: f.byFrequency?.[fr.id]?.scans ?? suggestedOf(fr),
+                title: `${fr.label}: suggested ${suggestedOf(fr)}`,
+                'aria-label': `Fusion scans for ${fr.label}`,
+                oninput: (e) => {
+                  put(fr.id, 'scans', e.target.value === '' ? null : Number(e.target.value));
+                  e.target.classList.toggle('own', e.target.value !== '');
+                  const box = e.target.closest('.fq');
+                  box.querySelector('.fq-reset').hidden = !box.querySelector('input.own');
+                  changed();
+                },
+              }),
+            ),
+            multi ? row('Model', (fr) => h('select', { 'aria-label': `Model for ${fr.label}`, onchange: (e) => (put(fr.id, 'model', e.target.value || null), changed()) }, short(modelOptions(f.byFrequency?.[fr.id]?.model)))) : null,
+          ),
+        ),
+      ),
+    );
+  }
   function renderPricing() {
     const f = cfg.fusion;
     f.models ||= [];
@@ -637,32 +697,15 @@ function clientApp(boot) {
       h(
         'div',
         { class: 'rules-grid', style: 'margin-top:22px' },
-        h(
-          'div',
-          null,
-          h('h3', { style: 'margin:0 0 8px;font-size:14px' }, 'Fusion scans by change frequency'),
-          h(
-            'table',
-            null,
-            h('thead', null, h('tr', null, h('th', null, 'Commits on the default branch'), S.report ? h('th', { class: 'n' }, 'Repos') : null, h('th', { class: 'n' }, `Scans / ${f.periodMonths || 12} mo`), h('th', null, 'Model'))),
-            h(
-              'tbody',
-              null,
-              S.frequencies.map((fr) => {
-                const suggested = Math.max(1, Math.ceil((({ 'more-5-week': 52, '1-5-week': 26, '2-weeks': 12, month: 6, '2-months': 4, '3-months': 4, '6-months': 2, year: 1, rare: 1 })[fr.id] * (f.periodMonths || 12)) / 12));
-                const own = f.byFrequency?.[fr.id]?.scans;
-                return h(
-                  'tr',
-                  null,
-                  h('td', null, fr.label, own === undefined || own === null ? h('span', { class: 'suggested' }, 'suggested') : null),
-                  S.report ? h('td', { class: 'n muted' }, String(reposIn(S.report.byFrequency, fr.id) ?? 0)) : null,
-                  h('td', { class: 'n' }, h('input', { type: 'number', min: 0, value: own ?? suggested, style: 'max-width:110px;margin-left:auto', oninput: (e) => (set(['fusion', 'byFrequency', fr.id], { ...(f.byFrequency?.[fr.id] || {}), scans: e.target.value === '' ? null : Number(e.target.value) }), schedulePrice()) })),
-                  h('td', null, h('select', { 'aria-label': `Model for ${fr.label}`, onchange: (e) => (set(['fusion', 'byFrequency', fr.id], { ...(f.byFrequency?.[fr.id] || {}), model: e.target.value || null }), schedulePrice()) }, modelOptions(f.byFrequency?.[fr.id]?.model))),
-                );
-              }),
-            ),
-          ),
-        ),
+        freqGrid({
+            f,
+            frequencies: S.frequencies,
+            suggestedOf: (fr) => Math.max(1, Math.ceil((({ 'more-5-week': 52, '1-5-week': 26, '2-weeks': 12, month: 6, '2-months': 4, '3-months': 4, '6-months': 2, year: 1, rare: 1 })[fr.id] * (f.periodMonths || 12)) / 12)),
+            reposOf: S.report ? (fr) => reposIn(S.report.byFrequency, fr.id) ?? 0 : null,
+            modelOptions,
+            changed: schedulePrice,
+            reset: () => (set(['fusion', 'byFrequency'], Object.fromEntries(Object.entries(f.byFrequency || {}).map(([k, v]) => [k, { ...v, scans: null }]))), renderPricing(), schedulePrice()),
+          }),
       ),
     );
   }
