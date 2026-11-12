@@ -51,10 +51,8 @@ export const UI_DEFAULTS = {
       "auth": {
         "method": "gh-cli"
       },
-      "name": "cxsmtp-git",
-      "orgs": [
-        "@me"
-      ]
+      "name": "github",
+      "orgs": "all"
     }
   ]
 };
