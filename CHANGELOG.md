@@ -4,6 +4,11 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-11-12
+
+### Changed
+- The default GitHub connection (used when there is no configuration file) is named `github` instead of a personal account name, and covers everything the sign-in can see (every organization and your own repositories) instead of only your own repositories.
+
 ## [1.4.1] - 2026-11-05
 
 A simpler pricing screen for new customers.
@@ -241,7 +246,8 @@ First release.
 - **Checkmarx One:** a scan was started but did not complete; see 1.3.0.
 - **Performance:** not benchmarked at scale; see 1.1.0.
 
-[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.2...v1.4.0
 [1.3.2]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.1...v1.3.2

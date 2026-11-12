@@ -69,7 +69,7 @@ test('the web app starts from the default settings, and saves without exposing t
     assert.equal(s.config.totals.extraPercent, 20);
     assert.equal(s.config.totals.bundleCredits, 10000);
     assert.equal(s.config.windowDays, 365);
-    assert.deepEqual(s.config.connections.map((c) => [c.name, c.provider, c.auth.method]), [['cxsmtp-git', 'github', 'gh-cli']]);
+    assert.deepEqual(s.config.connections.map((c) => [c.name, c.provider, c.auth.method]), [['github', 'github', 'gh-cli']]);
 
     const config = structuredClone(s.config);
     config.connections.push({ name: 'gl', provider: 'gitlab', orgs: ['acme'], auth: { method: 'pat', token: { value: 'glpat-secret' } } });
