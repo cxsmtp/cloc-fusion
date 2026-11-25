@@ -13,6 +13,7 @@ import { toCsv, toContributorsCsv } from '../report/csv.js';
 import { FREQUENCIES, suggestedScans } from '../fusion.js';
 import { UI_DEFAULTS } from '../ui/defaults.js';
 import { VERSION } from '../version.js';
+import { renameLegacyConnections } from '../legacy.js';
 
 const D = document;
 const $ = (s) => D.querySelector(s);
@@ -123,7 +124,7 @@ function startingSettings() {
   for (const c of base.connections) c.auth = { method: 'pat' };
   try {
     const saved = JSON.parse(store.get(STORE) || 'null');
-    if (saved && Array.isArray(saved.connections) && saved.fusion) return { ...base, ...saved };
+    if (saved && Array.isArray(saved.connections) && saved.fusion) return { ...base, ...saved, connections: renameLegacyConnections(saved.connections) };
   } catch {}
   return base;
 }

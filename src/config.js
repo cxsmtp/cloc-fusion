@@ -8,6 +8,7 @@ import { exec, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { providerOf } from './providers/index.js';
 import { savedToken } from './credentials.js';
+import { renameLegacyConnections } from './legacy.js';
 
 const run = promisify(exec);
 const runFile = promisify(execFile);
@@ -66,7 +67,7 @@ export function normalizeConfig(cfg = {}) {
   out.totals = { ...DEFAULTS.totals, ...(cfg.totals || {}) };
   out.overrides = cfg.overrides || {};
   out.bots = Array.isArray(cfg.bots) ? cfg.bots.map(String).filter(Boolean).slice(0, 200) : [];
-  out.connections = (cfg.connections || []).map((c, i) => {
+  out.connections = renameLegacyConnections([...(cfg.connections || [])].map((c) => (c && typeof c === 'object' ? { ...c } : c))).map((c, i) => {
     if (!c.provider) throw new Error(`connection #${i + 1} has no "provider"`);
     providerOf(c.provider);
     for (const r of c.repos || []) {
@@ -137,7 +138,7 @@ export async function resolveCredentials(conn, env = process.env) {
   let tokenRef = auth.token;
   if (!tokenRef && method?.tokenCommand) tokenRef = { command: method.tokenCommand(conn) };
   // A token saved by browser sign-in or pasted once in the web app (src/credentials.js).
-  const token = tokenRef?.saved ? await savedToken(conn.name) : await resolveSecret(tokenRef, env);
+  const token = tokenRef?.saved ? (await savedToken(conn.name)) || (conn.formerName ? await savedToken(conn.formerName) : '') : await resolveSecret(tokenRef, env);
   const username = typeof auth.username === 'object' ? await resolveSecret(auth.username, env) : auth.username || '';
   if (!token && auth.method && auth.method !== 'none') {
     const where = tokenRef?.env ? `the environment variable ${tokenRef.env} is empty` : tokenRef?.saved ? 'not signed in yet (sign in from the web app: cloc-fusion ui)' : 'no token is configured';
