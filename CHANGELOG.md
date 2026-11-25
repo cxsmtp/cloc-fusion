@@ -4,6 +4,11 @@ All notable changes to cloc-fusion. The format follows [Keep a Changelog](https:
 
 ## [Unreleased]
 
+## [1.4.3] - 2026-11-25
+
+### Fixed
+- **No personal name left from older settings.** A connection still called `cxsmtp-git` (the default before 1.4.2), in the standalone page's browser storage or a configuration file, is renamed `github` when the settings load, unless a `github` connection already exists. A token saved under the old name is still used, so nobody has to sign in again.
+
 ## [1.4.2] - 2026-11-12
 
 ### Changed
@@ -247,7 +252,8 @@ First release.
 - **Checkmarx One:** a scan was started but did not complete; see 1.3.0.
 - **Performance:** not benchmarked at scale; see 1.1.0.
 
-[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.2...HEAD
+[Unreleased]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.3...HEAD
+[1.4.3]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.2...v1.4.3
 [1.4.2]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/cxsmtp/cloc-fusion/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/cxsmtp/cloc-fusion/compare/v1.3.2...v1.4.0

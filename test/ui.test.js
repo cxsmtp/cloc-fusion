@@ -199,3 +199,25 @@ test('the HTML report recomputes credits in the page exactly as the engine does'
   assert.ok(!dom2.els.tbody.innerHTML.includes('<img'));
   assert.ok(!h2.includes('<img src=x'));
 });
+
+test('the old default connection name is renamed when settings load, and its saved token still works', async (t) => {
+  const { normalizeConfig, resolveCredentials } = await import('../src/config.js');
+  const { saveToken } = await import('../src/credentials.js');
+  const cfg = normalizeConfig({ connections: [{ name: 'cxsmtp-git', provider: 'github', auth: { method: 'pat', token: { saved: true } }, orgs: 'all' }] });
+  assert.equal(cfg.connections[0].name, 'github');
+  assert.equal(cfg.connections[0].formerName, 'cxsmtp-git');
+  // Someone who already has a connection named github keeps both, unchanged.
+  const both = normalizeConfig({ connections: [{ name: 'github', provider: 'github' }, { name: 'cxsmtp-git', provider: 'github' }] });
+  assert.deepEqual(both.connections.map((c) => c.name), ['github', 'cxsmtp-git']);
+  // A token saved under the old name is found under the new one.
+  const home = await mkdtemp(join(tmpdir(), 'cf-legacy-'));
+  const before = process.env.CLOC_FUSION_HOME;
+  process.env.CLOC_FUSION_HOME = home;
+  t.after(async () => {
+    if (before === undefined) delete process.env.CLOC_FUSION_HOME;
+    else process.env.CLOC_FUSION_HOME = before;
+    await rm(home, { recursive: true, force: true });
+  });
+  await saveToken('cxsmtp-git', 'old-token');
+  assert.equal((await resolveCredentials(cfg.connections[0])).token, 'old-token');
+});
